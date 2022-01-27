@@ -22,7 +22,7 @@ defmodule Utils do
 
         children = %{
           source: Source,
-          sink: %Sink{tick: opts.tick}
+          sink: %Sink{tick: opts.tick, how_many_tries: opts.how_many_tries}
         }
 
         children =
@@ -42,6 +42,13 @@ defmodule Utils do
         actions = [{:spec, %ParentSpec{children: children, links: links}}]
         {{:ok, actions}, %{}}
       end
+
+      @impl true
+      def handle_notification(:stop, _element, _context, state) do
+        Membrane.Pipeline.stop_and_terminate(self())
+        {:ok, state}
+      end
+
     end
   end
 end

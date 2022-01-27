@@ -1,11 +1,9 @@
 defmodule PullMode.Elements.Sink do
   use Membrane.Sink
 
-  def_options tick: [
-    type: :integer,
-    spec: pos_integer,
-    description:
-      "Positive integer, describing number of ticks after which the message to count evaluate the throughput should be send"
+  def_options [
+    tick: [type: :integer, spec: pos_integer, description: "Positive integer, describing number of ticks after which the message to count evaluate the throughput should be send"],
+    how_many_tries: [type: :integer, spec: pos_integer, description: "Positive integer, indicating how many meassurements should be made"]
   ]
 
   def_input_pad :input,
@@ -14,7 +12,7 @@ defmodule PullMode.Elements.Sink do
 
   @impl true
   def handle_init(opts) do
-    {:ok, %{message_count: 0, start_time: 0, tick: opts.tick}}
+    {:ok, %{message_count: 0, start_time: 0, tick: opts.tick, how_many_tries: opts.how_many_tries, tries_counter: 1}}
   end
 
   @impl true
@@ -38,7 +36,12 @@ defmodule PullMode.Elements.Sink do
   @impl true
   def handle_other(:tick, _ctx, state) do
     elapsed = (Membrane.Time.monotonic_time() - state.start_time) / Membrane.Time.second()
-    IO.inspect("[PULL MODE] Elapsed: #{elapsed} [s] Messages: #{state.message_count / elapsed} [M/s]")
-    {:ok, %{state | message_count: 0}}
+    IO.inspect("[PULL MODE] Elapsed: #{elapsed} [s] Messages: #{state.message_count / elapsed} [M/s] TRY NO: #{state.tries_counter}")
+    actions = if state.tries_counter==state.how_many_tries do
+        [notify: :stop]
+      else
+        []
+      end
+    {{:ok, actions}, %{state | message_count: 0, tries_counter: state.tries_counter+1}}
   end
 end

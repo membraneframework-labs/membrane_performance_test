@@ -36,8 +36,9 @@ defmodule PushMode.Elements.Source do
 
   @impl true
   def handle_init(_opts) do
-    messages = (@messages_per_second * @interval / 1000) |> trunc()
-    {:ok, %{messages: messages}}
+    messages_per_interval = (@messages_per_second * @interval / 1000) |> trunc()
+
+    {:ok, %{messages_per_interval: messages_per_interval}}
   end
 
   @impl true
@@ -48,7 +49,7 @@ defmodule PushMode.Elements.Source do
 
   @impl true
   def handle_other(:next_buffer, _ctx, state) do
-    buffers = for _i <- 1..state.messages, do: %Buffer{payload: @message}
+    buffers = for _i <- 1..state.messages_per_interval, do: %Buffer{payload: @message}
     actions = [buffer: {:output, buffers}]
     Process.send_after(self(), :next_buffer, @interval)
     {{:ok, actions}, state}
