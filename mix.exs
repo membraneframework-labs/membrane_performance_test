@@ -36,10 +36,10 @@ defmodule Membrane.Template.Mixfile do
 
   defp deps do
     [
-      {:membrane_core, "~> 0.8.1"},
-      {:ex_doc, ">= 0.0.0", only: :dev, runtime: false},
-      {:dialyxir, ">= 0.0.0", only: :dev, runtime: false},
-      {:credo, ">= 0.0.0", only: :dev, runtime: false}
+     {:membrane_core, "~> 0.8.1"},
+     {:ex_doc, "~> 0.22", only: :dev, runtime: false},
+     {:dialyxir, "~> 1.0.0", only: :dev, runtime: false},
+     {:credo, "~> 1.4", only: :dev, runtime: false}
     ]
   end
 
