@@ -1,0 +1,18 @@
+<html>
+    <head>
+        <title>Chart</title>
+        <script language="JavaScript">
+            function refreshIt(element) {
+                setTimeout(function() {
+                    element.src = element.src.split('?')[0] + '?' + new Date().getTime();
+                    refreshIt(element);
+                }, 100); // refresh every 50ms
+            }
+        </script>
+        <meta http-equiv="refresh" content="10">
+    </head>
+
+    <body>
+        <img src = "result.svg" alt="Chart" onload="refreshIt(this)"/>
+    </body>
+</html>

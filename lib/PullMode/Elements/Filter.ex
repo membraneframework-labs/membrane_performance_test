@@ -3,6 +3,9 @@ defmodule PullMode.Elements.Filter do
 
   def_input_pad :input, demand_unit: :buffers, caps: :any
   def_output_pad :output, caps: :any
+  def_options [
+    id: [type: :integer, spec: pos_integer, description: "Id of the element in the pipeline"]
+  ]
 
   @impl true
   def handle_init(_opts) do

@@ -4,33 +4,9 @@ defmodule PushMode.Elements.Source do
   alias Membrane.Buffer
 
   @message :crypto.strong_rand_bytes(1000)
-
   @interval 10
-
-  # n = 3
-  @messages_per_second 170_000
-  # n = 4
-  @messages_per_second 110_000
-  # n = 5
-  @messages_per_second 95_000
-  # n = 6
-  @messages_per_second 90_000
-  # n = 7
-  @messages_per_second 80_000
-  # n = 8
-  @messages_per_second 75_000
-  # n = 9
-  @messages_per_second 75_000
-  # n = 10
-  @messages_per_second 60_000
-  # n = 15
-  @messages_per_second 45_000
-  # n = 20
-  @messages_per_second 40_000
-  # n = 25
-  @messages_per_second 25_000
-  # n = 30
-  @messages_per_second 25_000
+  @flush_buffer %Buffer{payload: :flush}
+  @messages_per_second 50_000
 
   def_output_pad :output, mode: :push, caps: :any
 
@@ -38,7 +14,7 @@ defmodule PushMode.Elements.Source do
   def handle_init(_opts) do
     messages_per_interval = (@messages_per_second * @interval / 1000) |> trunc()
 
-    {:ok, %{messages_per_interval: messages_per_interval}}
+    {:ok, %{messages_per_interval: messages_per_interval, status: :playing}}
   end
 
   @impl true
@@ -48,10 +24,46 @@ defmodule PushMode.Elements.Source do
   end
 
   @impl true
-  def handle_other(:next_buffer, _ctx, state) do
-    buffers = for _i <- 1..state.messages_per_interval, do: %Buffer{payload: @message}
+  def handle_other(:next_buffer, _ctx, state=%{status: :playing}) do
+    buffers = for _i <- 1..state.messages_per_interval, do: %Buffer{payload: @message, dts: Membrane.Time.monotonic_time()}
     actions = [buffer: {:output, buffers}]
     Process.send_after(self(), :next_buffer, @interval)
     {{:ok, actions}, state}
   end
+
+
+  @impl true
+  def handle_other(:flush, _ctx, state=%{status: :playing}) do
+    actions = [buffer: {:output, @flush_buffer}]
+    state = %{state| status: :flushing}
+    {{:ok, actions}, state}
+  end
+
+  @impl true
+  def handle_other({:play, :slower}, _ctx, state=%{status: :flushing}) do
+    state = %{state| status: :playing}
+    Process.send_after(self(), :next_buffer, @interval)
+    {:ok, state}
+  end
+
+  @impl true
+  def handle_other({:play, :the_same}, _ctx, state=%{status: :flushing}) do
+    state = %{state| status: :playing}
+    Process.send_after(self(), :next_buffer, @interval)
+    {:ok, state}
+  end
+
+  @impl true
+  def handle_other({:play, :faster}, _ctx, state=%{status: :flushing}) do
+    state = %{state| status: :playing}
+    Process.send_after(self(), :next_buffer, @interval)
+    {:ok, state}
+  end
+
+
+  @impl true
+  def handle_other(_msg, _ctx, state) do
+    {:ok, state}
+  end
+
 end
