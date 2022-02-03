@@ -50,8 +50,7 @@ defmodule Pipeline do
       @impl true
       def handle_notification({:mails_update, id, number_of_mails}, _element, _context, state) do
         state = %{state|mails: state.mails |> Map.put(id, number_of_mails)}
-        output = prepare_plot(state)
-        File.write!(Path.absname("/Users/lukaszkita/membrane_performance_test/assets/result.svg"), output)
+        prepare_plot(state)
         {:ok, state}
       end
 

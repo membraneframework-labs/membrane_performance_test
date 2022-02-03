@@ -3,7 +3,7 @@ defmodule PushMode.Elements.Sink do
 
   alias Membrane.Buffer
   @flush_buffer %Buffer{payload: :flush}
-
+  @plot_path "result.svg"
 
   def_input_pad :input,
     caps: :any,
@@ -12,8 +12,8 @@ defmodule PushMode.Elements.Sink do
   def_options [
     tick: [type: :integer, spec: pos_integer, description: "Positive integer, describing number of ticks after which the message to count evaluate the throughput should be send"],
     how_many_tries: [type: :integer, spec: pos_integer, description: "Positive integer, indicating how many meassurements should be made"],
-    a: [],
-    b: []
+    numerator_of_probing_factor: [type: :integer, spec: pos_integer, description: "Numerator of the probing factor: X/Y meaning that X out of Y message passing times will be saved in the state."],
+    denominator_of_probing_factor: [type: :integer, spec: pos_integer, description: "Denominator of the probing factor: X/Y meaning that X out of Y message passing times will be saved in the state."]
   ]
 
   @impl true
@@ -21,7 +21,7 @@ defmodule PushMode.Elements.Sink do
     {:ok, %{message_count: 0, start_time: 0, tick: opts.tick,
      how_many_tries: opts.how_many_tries,
      tries_counter: 1, sum: 0, squares_sum: 0,
-     times: [], a: opts.a, b: opts.b,
+     times: [], numerator_of_probing_factor: opts.numerator_of_probing_factor, denominator_of_probing_factor: opts.denominator_of_probing_factor,
      status: :playing}}
   end
 
@@ -35,7 +35,7 @@ defmodule PushMode.Elements.Sink do
         state
       end
     time = Membrane.Time.monotonic_time() - buffer.dts
-    state = if :rand.uniform(state.b)<=state.a do
+    state = if :rand.uniform(state.denominator_of_probing_factor)<=state.numerator_of_probing_factor do
       Map.update!(state, :times, &([{buffer.dts-state.start_time, time} | &1]))
       else
         state
@@ -48,8 +48,14 @@ defmodule PushMode.Elements.Sink do
 
   @impl true
   def handle_write(:input, @flush_buffer, _ctx, state=%{status: :flushing}) do
+    avg = state.sum/state.message_count
+    std = :math.sqrt((state.squares_sum+state.message_count*avg*avg-2*avg*state.sum)/(state.message_count-1))
+    output = prepare_plot(state.times, avg, std)
+    File.write!(@plot_path, output)
+
+    specification = chceck_normality(state)
+    actions = [notify: {:play, specification}]
     state = %{state|  message_count: 0, sum: 0, squares_sum: 0, times: [], tries_counter: state.tries_counter+1, status: :playing}
-    actions = [notify: :play]
     {{:ok, actions}, state}
   end
 
@@ -61,14 +67,10 @@ defmodule PushMode.Elements.Sink do
   @impl true
   def handle_other(:tick, _ctx, state) do
     elapsed = (Membrane.Time.monotonic_time() - state.start_time) / Membrane.Time.second()
-    avg = state.sum/state.message_count
-    std = :math.sqrt((state.squares_sum+state.message_count*avg*avg-2*avg*state.sum)/(state.message_count-1))
-    IO.inspect("AVG: #{avg} STD: #{std} [us]")
+
     IO.inspect(
       "[PUSH MODE] Mailbox: #{Process.info(self())[:message_queue_len]} Elapsed: #{elapsed} [s] Messages: #{state.message_count / elapsed} [M/s] TRY: #{state.tries_counter}"
     )
-    output = prepare_plot(state.times)
-    File.write!(Path.absname("/Users/lukaszkita/membrane_performance_test/assets/result2.svg"), output)
 
     {actions, state} = if state.tries_counter==state.how_many_tries do
       {[notify: :stop], state}
@@ -84,14 +86,19 @@ defmodule PushMode.Elements.Sink do
     {:ok, state}
   end
 
-  defp prepare_plot(times) do
+  defp prepare_plot(times, avg, std) do
+    times = times |> Enum.map(fn {x, y} -> {x/1000_000, y/1000_000} end)
     ds = Contex.Dataset.new(times, ["x", "y"])
     point_plot = Contex.PointPlot.new(ds)
     plot = Contex.Plot.new(600, 400, point_plot)
     |> Contex.Plot.plot_options(%{legend_setting: :legend_right})
-    |> Contex.Plot.titles("Waiting time", "")
+    |> Contex.Plot.titles("AVG: #{:erlang.float_to_binary(avg/1000_000, [decimals: 3])} ms", "STD: #{:erlang.float_to_binary(std/1000_000, [decimals: 3])} ms")
+    |> Contex.Plot.axis_labels("Time of sending[ms]", "Passing time[ms]")
     {:safe, output} = Contex.Plot.to_svg(plot)
     output
   end
 
+  defp chceck_normality(_state) do
+    :the_same
+  end
 end
