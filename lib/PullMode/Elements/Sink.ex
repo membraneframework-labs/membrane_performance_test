@@ -3,7 +3,8 @@ defmodule PullMode.Elements.Sink do
 
   def_options [
     tick: [type: :integer, spec: pos_integer, description: "Positive integer, describing number of ticks after which the message to count evaluate the throughput should be send"],
-    how_many_tries: [type: :integer, spec: pos_integer, description: "Positive integer, indicating how many meassurements should be made"]
+    how_many_tries: [type: :integer, spec: pos_integer, description: "Positive integer, indicating how many meassurements should be made"],
+    output_directory: [type: :string, description: "Path to the directory where the results will be stored"]
   ]
 
   def_input_pad :input,
@@ -12,7 +13,7 @@ defmodule PullMode.Elements.Sink do
 
   @impl true
   def handle_init(opts) do
-    {:ok, %{message_count: 0, start_time: 0, tick: opts.tick, how_many_tries: opts.how_many_tries, tries_counter: 1}}
+    {:ok, %{message_count: 0, start_time: 0, tick: opts.tick, how_many_tries: opts.how_many_tries, tries_counter: 1, output_directory: opts.output_directory}}
   end
 
   @impl true

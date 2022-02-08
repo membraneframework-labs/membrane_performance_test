@@ -5,7 +5,6 @@ defmodule PushMode.Elements.Source do
 
   @message :crypto.strong_rand_bytes(1000)
   @interval 10
-  @flush_buffer %Buffer{payload: :flush}
 
   def_output_pad :output, mode: :push, caps: :any
 

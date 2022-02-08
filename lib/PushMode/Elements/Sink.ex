@@ -13,7 +13,9 @@ defmodule PushMode.Elements.Sink do
     tick: [type: :integer, spec: pos_integer, description: "Positive integer, describing number of ticks after which the message to count evaluate the throughput should be send"],
     how_many_tries: [type: :integer, spec: pos_integer, description: "Positive integer, indicating how many meassurements should be made"],
     numerator_of_probing_factor: [type: :integer, spec: pos_integer, description: "Numerator of the probing factor: X/Y meaning that X out of Y message passing times will be saved in the state."],
-    denominator_of_probing_factor: [type: :integer, spec: pos_integer, description: "Denominator of the probing factor: X/Y meaning that X out of Y message passing times will be saved in the state."]
+    denominator_of_probing_factor: [type: :integer, spec: pos_integer, description: "Denominator of the probing factor: X/Y meaning that X out of Y message passing times will be saved in the state."],
+    should_produce_plots?: [type: :boolean, description: "True, if the result.svg containing the plot of the passing times for the messages should be printed, false otherwise"],
+    output_directory: [type: :string, description: "Path to the directory where the results will be stored"]
   ]
 
   @impl true
@@ -22,7 +24,7 @@ defmodule PushMode.Elements.Sink do
      how_many_tries: opts.how_many_tries,
      tries_counter: 0, sum: 0, squares_sum: 0,
      times: [], numerator_of_probing_factor: opts.numerator_of_probing_factor, denominator_of_probing_factor: opts.denominator_of_probing_factor,
-     status: :playing, throughput: 0}}
+     status: :playing, throughput: 0, should_produce_plots?: opts.should_produce_plots?, output_directory: opts.output_directory}}
   end
 
   @impl true
@@ -48,11 +50,12 @@ defmodule PushMode.Elements.Sink do
 
   @impl true
   def handle_write(:input, %Buffer{payload: :flush, metadata: generator_frequency}, _ctx, state=%{status: :flushing}) do
-
     avg = state.sum/state.message_count
     std = :math.sqrt((state.squares_sum+state.message_count*avg*avg-2*avg*state.sum)/(state.message_count-1))
-    output = prepare_plot(state.times, avg, std)
-    File.write!(@plot_path, output)
+    if state.should_produce_plots? do
+      output = prepare_plot(state.times, avg, std)
+      File.write!(Integer.to_string(state.tries_counter)<>"_"<>@plot_path, output)
+    end
     specification = check_normality(state.times, avg, std, state.throughput, generator_frequency, state.tries_counter)
     actions =  [notify: {:play, specification}]
 
@@ -101,7 +104,6 @@ defmodule PushMode.Elements.Sink do
   end
 
   defp check_normality(_times, avg, std, throughput, generator_frequency, try_no) do
-    #:the_same
     cond do
       try_no == 0 -> :the_same
       #throughput < 0.5*generator_frequency -> IO.puts("first #{throughput} #{generator_frequency}")
