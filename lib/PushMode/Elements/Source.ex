@@ -41,7 +41,7 @@ defmodule PushMode.Elements.Source do
 
   @impl true
   def handle_other(:flush, _ctx, state=%{status: :playing}) do
-    actions = [buffer: {:output, @flush_buffer}]
+    actions = [buffer: {:output, %Buffer{payload: :flush, metadata: state.messages_per_second}}]
     state = %{state| status: :flushing}
     {{:ok, actions}, state}
   end
@@ -52,7 +52,7 @@ defmodule PushMode.Elements.Source do
     messages_per_second = (state.lower_bound+state.upper_bound)/2 |> trunc()
     messages_per_interval = (messages_per_second * @interval / 1000) |> trunc()
     state = %{state| messages_per_interval: messages_per_interval, messages_per_second: messages_per_second}
-
+    IO.puts("NEW FREQUENCY: #{messages_per_second} [msg/s]")
     Process.send_after(self(), :next_buffer, @interval)
     {:ok, state}
   end
@@ -60,6 +60,7 @@ defmodule PushMode.Elements.Source do
   @impl true
   def handle_other({:play, :the_same}, _ctx, state=%{status: :flushing}) do
     state = %{state| status: :playing}
+    IO.puts("NEW FREQUENCY: #{state.messages_per_second} [msg/s]")
     Process.send_after(self(), :next_buffer, @interval)
     {:ok, state}
   end
@@ -70,6 +71,7 @@ defmodule PushMode.Elements.Source do
     messages_per_second = (state.lower_bound+state.upper_bound)/2 |> trunc()
     messages_per_interval = (messages_per_second * @interval / 1000) |> trunc()
     state = %{state| messages_per_interval: messages_per_interval, messages_per_second: messages_per_second}
+    IO.puts("NEW FREQUENCY: #{messages_per_second} [msg/s]")
     Process.send_after(self(), :next_buffer, @interval)
     {:ok, state}
   end

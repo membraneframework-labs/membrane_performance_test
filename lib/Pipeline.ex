@@ -55,7 +55,7 @@ defmodule Pipeline do
       end
 
       defp prepare_plot(state) do
-        data = 2..state.n-1 |> Enum.map(fn id -> {id, Map.get(state.mails, id, 0)  } end)
+        data = 2..state.n-1 |> Enum.map(fn id -> {id, Map.get(state.mails, id, 0)} end)
         ds = Dataset.new(data, ["id", "mails"])
         scale = Contex.ContinuousLinearScale.new()
         scale = Contex.ContinuousLinearScale.domain(scale, 1, 10000)

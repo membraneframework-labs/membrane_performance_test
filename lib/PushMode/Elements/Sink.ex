@@ -2,7 +2,7 @@ defmodule PushMode.Elements.Sink do
   use Membrane.Sink
 
   alias Membrane.Buffer
-  @flush_buffer %Buffer{payload: :flush}
+
   @plot_path "result.svg"
 
   def_input_pad :input,
@@ -20,9 +20,9 @@ defmodule PushMode.Elements.Sink do
   def handle_init(opts) do
     {:ok, %{message_count: 0, start_time: 0, tick: opts.tick,
      how_many_tries: opts.how_many_tries,
-     tries_counter: 1, sum: 0, squares_sum: 0,
+     tries_counter: 0, sum: 0, squares_sum: 0,
      times: [], numerator_of_probing_factor: opts.numerator_of_probing_factor, denominator_of_probing_factor: opts.denominator_of_probing_factor,
-     status: :playing}}
+     status: :playing, throughput: 0}}
   end
 
   @impl true
@@ -47,14 +47,15 @@ defmodule PushMode.Elements.Sink do
   end
 
   @impl true
-  def handle_write(:input, @flush_buffer, _ctx, state=%{status: :flushing}) do
+  def handle_write(:input, %Buffer{payload: :flush, metadata: generator_frequency}, _ctx, state=%{status: :flushing}) do
+
     avg = state.sum/state.message_count
     std = :math.sqrt((state.squares_sum+state.message_count*avg*avg-2*avg*state.sum)/(state.message_count-1))
     output = prepare_plot(state.times, avg, std)
     File.write!(@plot_path, output)
+    specification = check_normality(state.times, avg, std, state.throughput, generator_frequency, state.tries_counter)
+    actions =  [notify: {:play, specification}]
 
-    specification = chceck_normality(state)
-    actions = [notify: {:play, specification}]
     state = %{state|  message_count: 0, sum: 0, squares_sum: 0, times: [], tries_counter: state.tries_counter+1, status: :playing}
     {{:ok, actions}, state}
   end
@@ -67,9 +68,9 @@ defmodule PushMode.Elements.Sink do
   @impl true
   def handle_other(:tick, _ctx, state) do
     elapsed = (Membrane.Time.monotonic_time() - state.start_time) / Membrane.Time.second()
-
+    throughput = state.message_count / elapsed
     IO.inspect(
-      "[PUSH MODE] Mailbox: #{Process.info(self())[:message_queue_len]} Elapsed: #{elapsed} [s] Messages: #{state.message_count / elapsed} [M/s] TRY: #{state.tries_counter}"
+      "[PUSH MODE] Mailbox: #{Process.info(self())[:message_queue_len]} Elapsed: #{elapsed} [s] Messages: #{throughput} [M/s] TRY: #{state.tries_counter}"
     )
 
     {actions, state} = if state.tries_counter==state.how_many_tries do
@@ -77,6 +78,7 @@ defmodule PushMode.Elements.Sink do
     else
       {[notify: :flush], %{state| status: :flushing}}
     end
+    state = %{state| throughput: throughput}
     {{:ok, actions}, state}
   end
 
@@ -98,7 +100,17 @@ defmodule PushMode.Elements.Sink do
     output
   end
 
-  defp chceck_normality(_state) do
-    :the_same
+  defp check_normality(_times, avg, std, throughput, generator_frequency, try_no) do
+    #:the_same
+    cond do
+      try_no == 0 -> :the_same
+      #throughput < 0.5*generator_frequency -> IO.puts("first #{throughput} #{generator_frequency}")
+      #  :slower
+      avg > 20_000_000 -> IO.puts("second #{avg}")
+        :slower
+      std > 10_000_000 and std > 0.5*avg -> IO.puts("third: #{avg}, #{std}")
+         :slower
+      true -> :faster
+    end
   end
 end
