@@ -1,11 +1,21 @@
 defmodule PullMode.Elements.Sink do
   use Membrane.Sink
 
-  def_options [
-    tick: [type: :integer, spec: pos_integer, description: "Positive integer, describing number of ticks after which the message to count evaluate the throughput should be send"],
-    how_many_tries: [type: :integer, spec: pos_integer, description: "Positive integer, indicating how many meassurements should be made"],
-    output_directory: [type: :string, description: "Path to the directory where the results will be stored"]
-  ]
+  def_options tick: [
+                type: :integer,
+                spec: pos_integer,
+                description:
+                  "Positive integer, describing number of ticks after which the message to count evaluate the throughput should be send"
+              ],
+              how_many_tries: [
+                type: :integer,
+                spec: pos_integer,
+                description: "Positive integer, indicating how many meassurements should be made"
+              ],
+              output_directory: [
+                type: :string,
+                description: "Path to the directory where the results will be stored"
+              ]
 
   def_input_pad :input,
     caps: :any,
@@ -13,7 +23,15 @@ defmodule PullMode.Elements.Sink do
 
   @impl true
   def handle_init(opts) do
-    {:ok, %{message_count: 0, start_time: 0, tick: opts.tick, how_many_tries: opts.how_many_tries, tries_counter: 1, output_directory: opts.output_directory}}
+    {:ok,
+     %{
+       message_count: 0,
+       start_time: 0,
+       tick: opts.tick,
+       how_many_tries: opts.how_many_tries,
+       tries_counter: 1,
+       output_directory: opts.output_directory
+     }}
   end
 
   @impl true
@@ -37,12 +55,25 @@ defmodule PullMode.Elements.Sink do
   @impl true
   def handle_other(:tick, _ctx, state) do
     elapsed = (Membrane.Time.monotonic_time() - state.start_time) / Membrane.Time.second()
-    IO.inspect("[PULL MODE] Elapsed: #{elapsed} [s] Messages: #{state.message_count / elapsed} [M/s] TRY NO: #{state.tries_counter}")
-    actions = if state.tries_counter==state.how_many_tries do
+    throughput = state.message_count / elapsed
+
+    IO.inspect(
+      "[PULL MODE][TRY NO: #{state.tries_counter}] Elapsed: #{elapsed} [s] Messages: #{throughput} [msg/s]"
+    )
+
+    File.write!(
+      Path.join(state.output_directory, "result.txt"),
+      Float.to_string(throughput) <> "\n",
+      [:append]
+    )
+
+    actions =
+      if state.tries_counter == state.how_many_tries do
         [notify: :stop]
       else
         []
       end
-    {{:ok, actions}, %{state | message_count: 0, tries_counter: state.tries_counter+1}}
+
+    {{:ok, actions}, %{state | message_count: 0, tries_counter: state.tries_counter + 1}}
   end
 end

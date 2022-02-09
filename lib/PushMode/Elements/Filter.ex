@@ -3,9 +3,12 @@ defmodule PushMode.Elements.Filter do
 
   def_input_pad :input, caps: :any, mode: :push
   def_output_pad :output, caps: :any, mode: :push
-  def_options [
-    id: [type: :integer, spec: pos_integer, description: "Id of the element in the pipeline"]
-  ]
+
+  def_options id: [
+                type: :integer,
+                spec: pos_integer,
+                description: "Id of the element in the pipeline"
+              ]
 
   @interval 100
 

@@ -8,8 +8,6 @@
 #   chunk_compress_policy_interval: "1 minute",
 #   log: false
 
-
-
 # config :membrane_core,
 #   telemetry_flags: [
 #     :links,

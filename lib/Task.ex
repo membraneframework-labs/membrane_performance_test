@@ -1,5 +1,4 @@
 defmodule Mix.Tasks.PerformanceTest do
-
   use Mix.Task
   @initial_lower_bound 0
   @initial_upper_bound 100_000
@@ -9,43 +8,101 @@ defmodule Mix.Tasks.PerformanceTest do
   @keywords_list [mode: :string, n: :integer, howManyTries: :integer, tick: :integer]
   def run(args) do
     {options, arguments, errors} = OptionParser.parse(args, strict: @keywords_list)
-    if errors != [] or length(arguments) != 1 or Enum.any?(@keywords_list, fn {key, _value}-> not Keyword.has_key?(options, key) end ) do
+
+    if errors != [] or length(arguments) != 1 or
+         Enum.any?(@keywords_list, fn {key, _value} -> not Keyword.has_key?(options, key) end) do
       IO.puts(@syntax_error_message)
     else
       mode = Keyword.get(options, :mode)
       n = Keyword.get(options, :n)
-      how_many_tries = Keyword.get(options, :how_many_tries)
+      how_many_tries = Keyword.get(options, :howManyTries)
       tick = Keyword.get(options, :tick)
       [output_directory_path] = arguments
-      pid = case mode do
-        "push" -> {:ok, pid} = Pipeline.start_link(%{
-                    n: n,
-                    source: %PushMode.Elements.Source{initial_lower_bound: @initial_lower_bound, initial_upper_bound: @initial_upper_bound},
-                    filter: %PushMode.Elements.Filter{id: -1},
-                    sink: %PushMode.Elements.Sink{tick: tick, how_many_tries: how_many_tries, numerator_of_probing_factor: @numerator_of_probing_factor, denominator_of_probing_factor: @denominator_of_probing_factor, should_produce_plots?: false, output_directory: output_directory_path}
-                  })
-                  pid
-        "pull" -> {:ok, pid} = Pipeline.start_link(%{
-                    n: n,
-                    filter: %PullMode.Elements.Filter{id: -1},
-                    source: PullMode.Elements.Source,
-                    sink: %PullMode.Elements.Sink{tick: tick, how_many_tries: how_many_tries, output_directory: output_directory_path}
-                  })
-                  pid
-        "autodemand" -> {:ok, pid} = Pipeline.start_link(%{
-                  n: n,
-                  filter: %AutoDemand.Elements.Filter{id: -1},
-                  source: AutoDemand.Elements.Source,
-                  sink: %AutoDemand.Elements.Sink{tick: tick, how_many_tries: how_many_tries, output_directory: output_directory_path}
-                })
-                pid
-        value -> IO.puts("Unknown mode: #{value}")
+
+      File.write(
+        Path.join(output_directory_path, "result.txt"),
+        "MODE: #{mode} N: #{n} TICK: #{tick}\n"
+      )
+
+      pid =
+        case mode do
+          "push" ->
+            options = %{
+              n: n,
+              source: %PushMode.Elements.Source{
+                initial_lower_bound: @initial_lower_bound,
+                initial_upper_bound: @initial_upper_bound
+              },
+              filter: %PushMode.Elements.Filter{id: -1},
+              sink: %PushMode.Elements.Sink{
+                tick: tick,
+                how_many_tries: how_many_tries,
+                numerator_of_probing_factor: @numerator_of_probing_factor,
+                denominator_of_probing_factor: @denominator_of_probing_factor,
+                should_produce_plots?: false,
+                output_directory: output_directory_path,
+                supervisor_pid: self()
+              }
+            }
+
+            {:ok, pid} = Pipeline.start_link(options)
+            Pipeline.play(pid)
+
+            generator_frequency =
+              receive do
+                {:generator_frequency_found, generator_frequency} ->
+                  IO.puts("FOUND FREQUENCY: #{generator_frequency}")
+                  generator_frequency
+              end
+
+            options = %{
+              options
+              | source: %PushMode.Elements.Source{
+                  initial_lower_bound: generator_frequency,
+                  initial_upper_bound: generator_frequency
+                }
+            }
+
+            {:ok, pid} = Pipeline.start_link(options)
+            pid
+
+          "pull" ->
+            {:ok, pid} =
+              Pipeline.start_link(%{
+                n: n,
+                filter: %PullMode.Elements.Filter{id: -1},
+                source: PullMode.Elements.Source,
+                sink: %PullMode.Elements.Sink{
+                  tick: tick,
+                  how_many_tries: how_many_tries,
+                  output_directory: output_directory_path
+                }
+              })
+
+            pid
+
+          "autodemand" ->
+            {:ok, pid} =
+              Pipeline.start_link(%{
+                n: n,
+                filter: %AutoDemand.Elements.Filter{id: -1},
+                source: AutoDemand.Elements.Source,
+                sink: %AutoDemand.Elements.Sink{
+                  tick: tick,
+                  how_many_tries: how_many_tries,
+                  output_directory: output_directory_path
+                }
+              })
+
+            pid
+
+          value ->
+            IO.puts("Unknown mode: #{value}")
             IO.puts(@syntax_error_message)
-      end
+        end
 
       Pipeline.play(pid)
       Utils.wait_for_complete(pid)
-  end
-
+    end
   end
 end
