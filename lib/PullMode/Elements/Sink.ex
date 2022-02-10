@@ -1,6 +1,6 @@
 defmodule PullMode.Elements.Sink do
   use Membrane.Sink
-
+  @plot_path "chart.svg"
   def_options tick: [
                 type: :integer,
                 spec: pos_integer,
@@ -15,6 +15,23 @@ defmodule PullMode.Elements.Sink do
               output_directory: [
                 type: :string,
                 description: "Path to the directory where the results will be stored"
+              ],
+              numerator_of_probing_factor: [
+                type: :integer,
+                spec: pos_integer,
+                description:
+                  "Numerator of the probing factor: X/Y meaning that X out of Y message passing times will be saved in the state."
+              ],
+              denominator_of_probing_factor: [
+                type: :integer,
+                spec: pos_integer,
+                description:
+                  "Denominator of the probing factor: X/Y meaning that X out of Y message passing times will be saved in the state."
+              ],
+              should_produce_plots?: [
+                type: :boolean,
+                description:
+                  "True, if the result.svg containing the plot of the passing times for the messages should be printed, false otherwise"
               ]
 
   def_input_pad :input,
@@ -30,17 +47,23 @@ defmodule PullMode.Elements.Sink do
        tick: opts.tick,
        how_many_tries: opts.how_many_tries,
        tries_counter: 1,
-       output_directory: opts.output_directory
+       output_directory: opts.output_directory,
+       sum: 0,
+       squares_sum: 0,
+       times: [],
+       numerator_of_probing_factor: opts.numerator_of_probing_factor,
+       denominator_of_probing_factor: opts.denominator_of_probing_factor,
+       should_produce_plots?: opts.should_produce_plots?
      }}
   end
 
   @impl true
   def handle_prepared_to_playing(_context, state) do
-    {{:ok, demand: :input}, state}
+    {{:ok, demand: {:input, 40}}, state}
   end
 
   @impl true
-  def handle_write(:input, _buffer, _context, state) do
+  def handle_write(:input, buffer, _context, state) do
     state =
       if state.message_count == 0 do
         Process.send_after(self(), :tick, state.tick)
@@ -49,7 +72,19 @@ defmodule PullMode.Elements.Sink do
         state
       end
 
-    {{:ok, demand: :input}, Map.update!(state, :message_count, &(&1 + 1))}
+    time = Membrane.Time.monotonic_time() - buffer.dts
+    state = Map.update!(state, :message_count, &(&1 + 1))
+    state = Map.update!(state, :sum, &(&1 + time))
+    state = Map.update!(state, :squares_sum, &(&1 + time * time))
+
+    state =
+      if :rand.uniform(state.denominator_of_probing_factor) <= state.numerator_of_probing_factor do
+        Map.update!(state, :times, &[{buffer.dts - state.start_time, time} | &1])
+      else
+        state
+      end
+
+    {{:ok, demand: {:input, 40}}, state}
   end
 
   @impl true
@@ -67,6 +102,19 @@ defmodule PullMode.Elements.Sink do
       [:append]
     )
 
+    avg = state.sum / state.message_count
+
+    std =
+      :math.sqrt(
+        (state.squares_sum + state.message_count * avg * avg - 2 * avg * state.sum) /
+          (state.message_count - 1)
+      )
+
+    if state.should_produce_plots? do
+      output = Utils.prepare_plot(state.times, avg, std)
+      File.write!(Integer.to_string(state.tries_counter) <> "_" <> @plot_path, output)
+    end
+
     actions =
       if state.tries_counter == state.how_many_tries do
         [notify: :stop]
@@ -74,6 +122,15 @@ defmodule PullMode.Elements.Sink do
         []
       end
 
-    {{:ok, actions}, %{state | message_count: 0, tries_counter: state.tries_counter + 1}}
+    state = %{
+      state
+      | message_count: 0,
+        sum: 0,
+        squares_sum: 0,
+        times: [],
+        tries_counter: state.tries_counter + 1
+    }
+
+    {{:ok, actions}, state}
   end
 end

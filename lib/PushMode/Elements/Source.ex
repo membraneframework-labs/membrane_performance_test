@@ -2,9 +2,10 @@ defmodule PushMode.Elements.Source do
   use Membrane.Source
 
   alias Membrane.Buffer
+  alias Membrane.Time
 
   @message :crypto.strong_rand_bytes(1000)
-  @interval 10
+  @interval 100
 
   def_output_pad :output, mode: :push, caps: :any
 
@@ -38,24 +39,26 @@ defmodule PushMode.Elements.Source do
 
   @impl true
   def handle_prepared_to_playing(_ctx, state) do
-    Process.send_after(self(), :next_buffer, @interval)
-    {:ok, state}
+    {{:ok, start_timer: {:next_buffer_timer, Ratio.new(Time.milliseconds(@interval), 1)}}, state}
   end
 
   @impl true
-  def handle_other(:next_buffer, _ctx, state = %{status: :playing}) do
+  def handle_tick(:next_buffer_timer, _ctx, state = %{status: :playing}) do
     buffers =
       for _i <- 1..state.messages_per_interval,
           do: %Buffer{payload: @message, dts: Membrane.Time.monotonic_time()}
 
     actions = [buffer: {:output, buffers}]
-    Process.send_after(self(), :next_buffer, @interval)
     {{:ok, actions}, state}
   end
 
   @impl true
   def handle_other(:flush, _ctx, state = %{status: :playing}) do
-    actions = [buffer: {:output, %Buffer{payload: :flush, metadata: state.messages_per_second}}]
+    actions = [
+      buffer: {:output, %Buffer{payload: :flush, metadata: state.messages_per_second}},
+      stop_timer: :next_buffer_timer
+    ]
+
     state = %{state | status: :flushing}
     {{:ok, actions}, state}
   end
@@ -73,16 +76,15 @@ defmodule PushMode.Elements.Source do
     }
 
     IO.puts("NEW FREQUENCY: #{messages_per_second} [msg/s]")
-    Process.send_after(self(), :next_buffer, @interval)
-    {:ok, state}
+
+    {{:ok, start_timer: {:next_buffer_timer, Ratio.new(Time.milliseconds(@interval), 1)}}, state}
   end
 
   @impl true
   def handle_other({:play, :the_same}, _ctx, state = %{status: :flushing}) do
     state = %{state | status: :playing}
     IO.puts("NEW FREQUENCY: #{state.messages_per_second} [msg/s]")
-    Process.send_after(self(), :next_buffer, @interval)
-    {:ok, state}
+    {{:ok, start_timer: {:next_buffer_timer, Ratio.new(Time.milliseconds(@interval), 1)}}, state}
   end
 
   @impl true
@@ -98,8 +100,7 @@ defmodule PushMode.Elements.Source do
     }
 
     IO.puts("NEW FREQUENCY: #{messages_per_second} [msg/s]")
-    Process.send_after(self(), :next_buffer, @interval)
-    {:ok, state}
+    {{:ok, start_timer: {:next_buffer_timer, Ratio.new(Time.milliseconds(@interval), 1)}}, state}
   end
 
   @impl true

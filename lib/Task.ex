@@ -19,11 +19,6 @@ defmodule Mix.Tasks.PerformanceTest do
       tick = Keyword.get(options, :tick)
       [output_directory_path] = arguments
 
-      File.write(
-        Path.join(output_directory_path, "result.txt"),
-        "MODE: #{mode} N: #{n} TICK: #{tick}\n"
-      )
-
       pid =
         case mode do
           "push" ->
@@ -39,7 +34,7 @@ defmodule Mix.Tasks.PerformanceTest do
                 how_many_tries: how_many_tries,
                 numerator_of_probing_factor: @numerator_of_probing_factor,
                 denominator_of_probing_factor: @denominator_of_probing_factor,
-                should_produce_plots?: false,
+                should_produce_plots?: true,
                 output_directory: output_directory_path,
                 supervisor_pid: self()
               }
@@ -75,7 +70,10 @@ defmodule Mix.Tasks.PerformanceTest do
                 sink: %PullMode.Elements.Sink{
                   tick: tick,
                   how_many_tries: how_many_tries,
-                  output_directory: output_directory_path
+                  output_directory: output_directory_path,
+                  numerator_of_probing_factor: @numerator_of_probing_factor,
+                  denominator_of_probing_factor: @denominator_of_probing_factor,
+                  should_produce_plots?: true
                 }
               })
 
@@ -90,7 +88,10 @@ defmodule Mix.Tasks.PerformanceTest do
                 sink: %AutoDemand.Elements.Sink{
                   tick: tick,
                   how_many_tries: how_many_tries,
-                  output_directory: output_directory_path
+                  output_directory: output_directory_path,
+                  numerator_of_probing_factor: @numerator_of_probing_factor,
+                  denominator_of_probing_factor: @denominator_of_probing_factor,
+                  should_produce_plots?: true
                 }
               })
 
@@ -101,8 +102,18 @@ defmodule Mix.Tasks.PerformanceTest do
             IO.puts(@syntax_error_message)
         end
 
+      provide_results_file_header(Path.join(output_directory_path, "result.txt"), {mode, n, tick})
       Pipeline.play(pid)
       Utils.wait_for_complete(pid)
     end
+  end
+
+  defp provide_results_file_header(path, {mode, n, tick}) do
+    File.rm!(path)
+
+    File.write(
+      path,
+      "MODE: #{mode} N: #{n} TICK: #{tick}\n"
+    )
   end
 end

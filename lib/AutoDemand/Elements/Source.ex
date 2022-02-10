@@ -14,7 +14,10 @@ defmodule AutoDemand.Elements.Source do
 
   @impl true
   def handle_demand(:output, size, :buffers, _ctx, state) do
-    buffers = 1..size |> Enum.map(fn _i -> %Buffer{payload: @message} end)
+    buffers =
+      1..size
+      |> Enum.map(fn _i -> %Buffer{payload: @message, dts: Membrane.Time.monotonic_time()} end)
+
     actions = [buffer: {:output, buffers}]
     {{:ok, actions}, state}
   end
