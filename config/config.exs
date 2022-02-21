@@ -1,4 +1,4 @@
-# import Config
+import Config
 # config :membrane_timescaledb_reporter, Membrane.Telemetry.TimescaleDB.Repo,
 #   database: "membrane_timescaledb_reporter",
 #   username: "postgres",
@@ -17,3 +17,9 @@
 # config :membrane_timescaledb_reporter,
 #   reporters: 5, # number of reporter's workers
 #   auto_migrate?: true # decides if the auto migration task should get triggered during supervisor initialization
+
+config :logger,
+  backends: [:console],
+  compile_time_purge_matching: [
+    [level_lower_than: :info]
+  ]

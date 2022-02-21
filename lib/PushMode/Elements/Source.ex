@@ -5,7 +5,7 @@ defmodule PushMode.Elements.Source do
   alias Membrane.Time
 
   @message :crypto.strong_rand_bytes(1000)
-  @interval 100
+  @interval 10
 
   def_output_pad :output, mode: :push, caps: :any
 
@@ -53,7 +53,7 @@ defmodule PushMode.Elements.Source do
   end
 
   @impl true
-  def handle_other(:flush, _ctx, state = %{status: :playing}) do
+  def handle_other(:flush, ctx, state = %{status: :playing}) do
     actions = [
       buffer: {:output, %Buffer{payload: :flush, metadata: state.messages_per_second}},
       stop_timer: :next_buffer_timer

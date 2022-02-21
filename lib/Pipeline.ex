@@ -20,8 +20,8 @@ defmodule Pipeline do
 
     links = [
       1..(n - 2)
-      |> Enum.reduce(ParentSpec.link(:source), fn i, link_acc ->
-        ParentSpec.to(link_acc, String.to_atom("filter#{i}"))
+      |> Enum.reduce(ParentSpec.link(:source)|>via_in(:input, toilet_capacity: 400000), fn i, link_acc ->
+         ParentSpec.to(link_acc, String.to_atom("filter#{i}"))
       end)
       |> ParentSpec.to(:sink)
     ]
