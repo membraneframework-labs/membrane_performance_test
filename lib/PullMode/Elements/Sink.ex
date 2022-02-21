@@ -50,6 +50,7 @@ defmodule PullMode.Elements.Sink do
   @impl true
   def handle_init(opts) do
     statistics = opts.statistics |> Enum.filter(fn key -> key in @available_statistics end)
+
     state = %{
       message_count: 0,
       start_time: 0,
@@ -71,7 +72,11 @@ defmodule PullMode.Elements.Sink do
       std: 0,
       generator_frequency: 0
     }
-    if opts.provide_statistics_header? do provide_results_file_header(state) end
+
+    if opts.provide_statistics_header? do
+      provide_results_file_header(state)
+    end
+
     {:ok, state}
   end
 
@@ -119,7 +124,8 @@ defmodule PullMode.Elements.Sink do
         (state.squares_sum + state.message_count * avg * avg - 2 * avg * state.sum) /
           (state.message_count - 1)
       )
-    state = %{state|avg: avg, std: std, generator_frequency: generator_frequency}
+
+    state = %{state | avg: avg, std: std, generator_frequency: generator_frequency}
 
     write_demanded_statistics(state)
 
@@ -150,7 +156,8 @@ defmodule PullMode.Elements.Sink do
         tries_counter: state.tries_counter + 1,
         status: :playing
     }
-    actions = actions++[demand: {:input, 1}]
+
+    actions = actions ++ [demand: {:input, 1}]
     {{:ok, actions}, state}
   end
 
@@ -172,32 +179,36 @@ defmodule PullMode.Elements.Sink do
     cond do
       try_no == 0 ->
         :the_same
+
       avg > 20_000_000 ->
         :slower
+
       std > 10_000_000 and std > 0.5 * avg ->
         :slower
+
       true ->
         :faster
     end
   end
 
- defp write_demanded_statistics(state) do
-  content = state.statistics |> Enum.map(fn key -> Map.get(state, key) end) |> Enum.join(",")
-  content = content <> "\n"
-  File.write(@statistics_path, content, [:append])
-  if state.should_produce_plots? do
-    output = Utils.prepare_plot(state.times, state.avg, state.std)
-    File.write!(Integer.to_string(state.tries_counter) <> "_" <> @plot_path, output)
+  defp write_demanded_statistics(state) do
+    content = state.statistics |> Enum.map(fn key -> Map.get(state, key) end) |> Enum.join(",")
+    content = content <> "\n"
+    File.write(@statistics_path, content, [:append])
+
+    if state.should_produce_plots? do
+      output = Utils.prepare_plot(state.times, state.avg, state.std)
+      File.write!(Integer.to_string(state.tries_counter) <> "_" <> @plot_path, output)
+    end
   end
- end
 
- defp provide_results_file_header(state) do
-  content = (state.statistics |> Enum.join(",") )<>"\n"
-  File.write(
-    @statistics_path,
-    content,
-    [:append]
-  )
-end
+  defp provide_results_file_header(state) do
+    content = (state.statistics |> Enum.join(",")) <> "\n"
 
+    File.write(
+      @statistics_path,
+      content,
+      [:append]
+    )
+  end
 end

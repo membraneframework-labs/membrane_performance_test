@@ -7,14 +7,28 @@ defmodule Mix.Tasks.PerformanceTest do
    --statistics <comma separated list of statistic names which should be saved>
    OPTIONAL: [--shouldAdjustGeneratorFrequency, --shouldProducePlots, --shouldProvideStatisticsHeader]
    ARG: <output directory path>"
-  @strict_keywords_list [mode: :string, n: :integer, howManyTries: :integer, tick: :integer, initalGeneratorFrequency: :integer, statistics: :string]
-  @optional_keywords_list [shouldAdjustGeneratorFrequency: :boolean, shouldProducePlots: :boolean, shouldProvideStatisticsHeader: :boolean]
+  @strict_keywords_list [
+    mode: :string,
+    n: :integer,
+    howManyTries: :integer,
+    tick: :integer,
+    initalGeneratorFrequency: :integer,
+    statistics: :string
+  ]
+  @optional_keywords_list [
+    shouldAdjustGeneratorFrequency: :boolean,
+    shouldProducePlots: :boolean,
+    shouldProvideStatisticsHeader: :boolean
+  ]
 
   def run(args) do
-    {options, arguments, errors} = OptionParser.parse(args, strict: @strict_keywords_list++@optional_keywords_list)
+    {options, arguments, errors} =
+      OptionParser.parse(args, strict: @strict_keywords_list ++ @optional_keywords_list)
 
     if errors != [] or length(arguments) != 1 or
-         Enum.any?(@strict_keywords_list, fn {key, _value} -> not Keyword.has_key?(options, key) end) do
+         Enum.any?(@strict_keywords_list, fn {key, _value} ->
+           not Keyword.has_key?(options, key)
+         end) do
       IO.puts(args)
       IO.puts(@syntax_error_message)
     else
@@ -29,24 +43,28 @@ defmodule Mix.Tasks.PerformanceTest do
       statistics = Keyword.get(options, :statistics) |> parse_statistics()
       [output_directory_path] = arguments
 
-      module = case mode do
-        "pull" ->
-          PullMode
-        "push" ->
-          PushMode
-        "autodemand" ->
-          AutoDemand
-        value ->
-          IO.puts("Unknown mode: #{value}")
-          IO.puts(@syntax_error_message)
+      module =
+        case mode do
+          "pull" ->
+            PullMode
+
+          "push" ->
+            PushMode
+
+          "autodemand" ->
+            AutoDemand
+
+          value ->
+            IO.puts("Unknown mode: #{value}")
+            IO.puts(@syntax_error_message)
         end
 
-
-        options = %{
-          n: n,
-          source: nil,
-          filter: Module.concat(module, Elements.Filter).__struct__([id: -1]),
-          sink: Module.concat(module, Elements.Sink).__struct__([
+      options = %{
+        n: n,
+        source: nil,
+        filter: Module.concat(module, Elements.Filter).__struct__(id: -1),
+        sink:
+          Module.concat(module, Elements.Sink).__struct__(
             tick: tick,
             how_many_tries: how_many_tries,
             numerator_of_probing_factor: @numerator_of_probing_factor,
@@ -56,37 +74,46 @@ defmodule Mix.Tasks.PerformanceTest do
             supervisor_pid: self(),
             statistics: statistics,
             provide_statistics_header?: should_provide_statistics_header
-          ])
+          )
+      }
+
+      if should_adjust_generator_frequency do
+        initial_lower_bound = 0
+        initial_upper_bound = inital_generator_frequency * 2
+
+        options = %{
+          options
+          | source:
+              Module.concat(module, Elements.Source).__struct__(
+                initial_lower_bound: initial_lower_bound,
+                initial_upper_bound: initial_upper_bound
+              )
         }
 
-        if should_adjust_generator_frequency do
-          initial_lower_bound = 0
-          initial_upper_bound = inital_generator_frequency*2
-          options = %{options|
-            source: Module.concat(module, Elements.Source).__struct__([
-              initial_lower_bound: initial_lower_bound,
-              initial_upper_bound: initial_upper_bound]
-            )
-          }
-          {:ok, pid} = Pipeline.start_link(options)
-          Pipeline.play(pid)
-          frequency = receive do
+        {:ok, pid} = Pipeline.start_link(options)
+        Pipeline.play(pid)
+
+        frequency =
+          receive do
             {:generator_frequency_found, generator_frequency} ->
               generator_frequency
           end
-          IO.puts(frequency)
-        else
-          options = %{options|
-            source: Module.concat(module, Elements.Source).__struct__([
-              initial_lower_bound: inital_generator_frequency,
-              initial_upper_bound: inital_generator_frequency
-            ])
-          }
-          {:ok, pid} = Pipeline.start_link(options)
-          Pipeline.play(pid)
-          Utils.wait_for_complete(pid)
-        end
 
+        IO.puts(frequency)
+      else
+        options = %{
+          options
+          | source:
+              Module.concat(module, Elements.Source).__struct__(
+                initial_lower_bound: inital_generator_frequency,
+                initial_upper_bound: inital_generator_frequency
+              )
+        }
+
+        {:ok, pid} = Pipeline.start_link(options)
+        Pipeline.play(pid)
+        Utils.wait_for_complete(pid)
+      end
     end
   end
 
@@ -95,5 +122,4 @@ defmodule Mix.Tasks.PerformanceTest do
       String.to_atom(statistic_name)
     end
   end
-
 end

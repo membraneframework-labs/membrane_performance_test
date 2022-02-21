@@ -74,6 +74,7 @@ defmodule PullMode.Elements.Source do
       | messages_per_interval: messages_per_interval,
         messages_per_second: messages_per_second
     }
+
     {{:ok, start_timer: {:next_buffer_timer, Ratio.new(Time.milliseconds(@interval), 1)}}, state}
   end
 
@@ -94,6 +95,7 @@ defmodule PullMode.Elements.Source do
       | messages_per_interval: messages_per_interval,
         messages_per_second: messages_per_second
     }
+
     {{:ok, start_timer: {:next_buffer_timer, Ratio.new(Time.milliseconds(@interval), 1)}}, state}
   end
 

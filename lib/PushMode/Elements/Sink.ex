@@ -171,14 +171,17 @@ defmodule PushMode.Elements.Sink do
     cond do
       try_no == 0 ->
         :the_same
+
       # throughput < 0.5*generator_frequency -> IO.puts("first #{throughput} #{generator_frequency}")
       #  :slower
       avg > 20_000_000 ->
         IO.puts("second #{avg}")
         :slower
+
       std > 10_000_000 and std > 0.5 * avg ->
         IO.puts("third: #{avg}, #{std}")
         :slower
+
       true ->
         :faster
     end
