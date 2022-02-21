@@ -163,13 +163,7 @@ defmodule PullMode.Elements.Sink do
   def handle_other(:tick, _ctx, state) do
     elapsed = (Membrane.Time.monotonic_time() - state.start_time) / Membrane.Time.second()
     throughput = state.message_count / elapsed
-
-    # IO.puts(
-    #   "[PULL MODE][TRY: #{state.tries_counter}]Mailbox: #{Process.info(self())[:message_queue_len]} Elapsed: #{elapsed} [s] Messages: #{throughput} [msg/s]"
-    # )
-
     {actions, state} = {[notify: :flush], %{state | status: :flushing}}
-
     state = %{state | throughput: throughput}
     {{:ok, actions}, state}
   end
