@@ -3,9 +3,9 @@ defmodule Mix.Tasks.PerformanceTest do
   @numerator_of_probing_factor 1
   @denominator_of_probing_factor 100
   @syntax_error_message "Wrong syntax! Try: mix performance_test --mode <push|pull|autodemand> --n <number of elements> --howManyTries <how many tries> --tick <single try length [ms]> --initialLowerBound <> --initialUpperBound <> [output directory]"
-  @strict_keywords_list [mode: :string, n: :integer, howManyTries: :integer, tick: :integer, initalGeneratorFrequency: :integer]
-  @optional_keywords_list [shouldAdjustGeneratorFrequency: :boolean, shouldProducePlots: :boolean, shouldProvideStatisticsHeader: :boolean ]
-  @statistics [:tick, :throughput, :avg, :std, :tries_counter, :generator_frequency]
+  @strict_keywords_list [mode: :string, n: :integer, howManyTries: :integer, tick: :integer, initalGeneratorFrequency: :integer, statistics: :string]
+  @optional_keywords_list [shouldAdjustGeneratorFrequency: :boolean, shouldProducePlots: :boolean, shouldProvideStatisticsHeader: :boolean]
+
   def run(args) do
     {options, arguments, errors} = OptionParser.parse(args, strict: @strict_keywords_list++@optional_keywords_list)
 
@@ -22,8 +22,7 @@ defmodule Mix.Tasks.PerformanceTest do
       should_adjust_generator_frequency = Keyword.get(options, :shouldAdjustGeneratorFrequency)
       should_produce_plots = Keyword.get(options, :shouldProducePlots)
       should_provide_statistics_header = Keyword.get(options, :shouldProvideStatisticsHeader)
-      initial_lower_bound = 0
-      initial_upper_bound = inital_generator_frequency*2
+      statistics = Keyword.get(options, :statistics) |> parse_statistics()
       [output_directory_path] = arguments
 
       case mode do
@@ -40,12 +39,14 @@ defmodule Mix.Tasks.PerformanceTest do
               should_produce_plots?: should_produce_plots,
               output_directory: output_directory_path,
               supervisor_pid: self(),
-              statistics: @statistics,
+              statistics: statistics,
               provide_statistics_header?: should_provide_statistics_header
             }
           }
 
           if should_adjust_generator_frequency do
+            initial_lower_bound = 0
+            initial_upper_bound = inital_generator_frequency*2
             options = %{options|
               source: %PullMode.Elements.Source{
                 initial_lower_bound: initial_lower_bound,
@@ -79,6 +80,12 @@ defmodule Mix.Tasks.PerformanceTest do
           IO.puts(@syntax_error_message)
         end
 
+    end
+  end
+
+  defp parse_statistics(statistics_string) do
+    for statistic_name <- statistics_string |> String.split(",") do
+      String.to_atom(statistic_name)
     end
   end
 
