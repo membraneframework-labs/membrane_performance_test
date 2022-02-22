@@ -4,7 +4,7 @@ defmodule Mix.Tasks.PerformanceTest do
   @denominator_of_probing_factor 100
   @syntax_error_message "Wrong syntax! Try: mix performance_test --mode <push|pull|autodemand> --n <number of elements>
    --howManyTries <how many tries> --tick <single try length [ms]> --initialGeneratorFrequency <frequency of the message generator in the first run>
-   --statistics <comma separated list of statistic names which should be saved>
+   --statistics <comma separated list of statistic names which should be saved> --reductions <number of reductions to be performed in each filter, while processing buffer>
    OPTIONAL: [--shouldAdjustGeneratorFrequency, --shouldProducePlots, --shouldProvideStatisticsHeader]
    ARG: <output directory path>"
   @strict_keywords_list [
@@ -13,7 +13,8 @@ defmodule Mix.Tasks.PerformanceTest do
     howManyTries: :integer,
     tick: :integer,
     initalGeneratorFrequency: :integer,
-    statistics: :string
+    statistics: :string,
+    reductions: :integer
   ]
   @optional_keywords_list [
     shouldAdjustGeneratorFrequency: :boolean,
@@ -41,6 +42,7 @@ defmodule Mix.Tasks.PerformanceTest do
       should_produce_plots = Keyword.get(options, :shouldProducePlots)
       should_provide_statistics_header = Keyword.get(options, :shouldProvideStatisticsHeader)
       statistics = Keyword.get(options, :statistics) |> parse_statistics()
+      reductions = Keyword.get(options, :reductions)
       [output_directory_path] = arguments
 
       module =
@@ -62,7 +64,7 @@ defmodule Mix.Tasks.PerformanceTest do
       options = %{
         n: n,
         source: nil,
-        filter: Module.concat(module, Elements.Filter).__struct__(id: -1),
+        filter: Module.concat(module, Elements.Filter).__struct__(id: -1, reductions: reductions),
         sink:
           Module.concat(module, Elements.Sink).__struct__(
             tick: tick,

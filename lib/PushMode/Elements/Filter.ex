@@ -8,7 +8,13 @@ defmodule PushMode.Elements.Filter do
                 type: :integer,
                 spec: pos_integer,
                 description: "Id of the element in the pipeline"
+              ],
+              reductions: [
+                type: :integer,
+                spec: pos_integer,
+                description: "Number of reductions which should be done while processing each buffer"
               ]
+
 
   @impl true
   def handle_init(opts) do

@@ -1,7 +1,7 @@
 defmodule Pipeline do
   use Membrane.Pipeline
   alias Membrane.ParentSpec
-  @toilet_capacity 400_000
+  @toilet_capacity 400
   @impl true
   def handle_init(opts) do
     n = opts.n
