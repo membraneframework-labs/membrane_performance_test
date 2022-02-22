@@ -11,17 +11,17 @@ defmodule AutoDemand.Elements.Filter do
               ]
 
   @impl true
-  def handle_init(_opts) do
-    {:ok, %{}}
+  def handle_init(opts) do
+    Base.Filter.handle_init(opts)
   end
 
   @impl true
-  def handle_caps(:input, _caps, _context, state) do
-    {{:ok, caps: :any}, state}
+  def handle_caps(:input, caps, ctx, state) do
+    Base.Filter.handle_caps(:input, caps, ctx, state)
   end
 
   @impl true
-  def handle_process(:input, buffer, _ctx, state) do
-    {{:ok, [buffer: {:output, [buffer]}]}, state}
+  def handle_process(:input, buffer, ctx, state) do
+    Base.Filter.handle_process(:input, buffer, ctx, state)
   end
 end

@@ -48,27 +48,4 @@ defmodule Pipeline do
     actions = [forward: {:source, :flush}]
     {{:ok, actions}, state}
   end
-
-  @impl true
-  def handle_notification({:mails_update, id, number_of_mails}, _element, _context, state) do
-    state = %{state | mails: state.mails |> Map.put(id, number_of_mails)}
-    prepare_plot(state)
-    {:ok, state}
-  end
-
-  defp prepare_plot(state) do
-    data = 2..(state.n - 1) |> Enum.map(fn id -> {id, Map.get(state.mails, id, 0)} end)
-    ds = Dataset.new(data, ["id", "mails"])
-    scale = Contex.ContinuousLinearScale.new()
-    scale = Contex.ContinuousLinearScale.domain(scale, 1, 10000)
-    point_plot = BarChart.new(ds, data_labels: false, custom_value_scale: scale)
-
-    plot =
-      Plot.new(600, 400, point_plot)
-      |> Plot.plot_options(%{legend_setting: :legend_right})
-      |> Plot.titles("Number of mails in mailbox", "in each filter")
-
-    {:safe, output} = Plot.to_svg(plot)
-    output
-  end
 end

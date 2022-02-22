@@ -10,34 +10,18 @@ defmodule PushMode.Elements.Filter do
                 description: "Id of the element in the pipeline"
               ]
 
-  @interval 100
-
   @impl true
   def handle_init(opts) do
-    {:ok, %{id: opts.id}}
+    Base.Filter.handle_init(opts)
   end
 
   @impl true
-  def handle_caps(:input, _caps, _context, state) do
-    {{:ok, caps: :any}, state}
+  def handle_caps(:input, caps, ctx, state) do
+    Base.Filter.handle_caps(:input, caps, ctx, state)
   end
 
   @impl true
-  def handle_process(:input, buffer, _ctx, state) do
-    {{:ok, [buffer: {:output, [buffer]}]}, state}
-  end
-
-  @impl true
-  def handle_prepared_to_playing(_ctx, state) do
-    Process.send_after(self(), :check_mailbox, @interval)
-    {:ok, state}
-  end
-
-  @impl true
-  def handle_other(:check_mailbox, _ctx, state) do
-    mails_number = Process.info(self())[:message_queue_len]
-    actions = [notify: {:mails_update, state.id, mails_number}]
-    Process.send_after(self(), :check_mailbox, @interval)
-    {{:ok, actions}, state}
+  def handle_process(:input, buffer, ctx, state) do
+    Base.Filter.handle_process(:input, buffer, ctx, state)
   end
 end

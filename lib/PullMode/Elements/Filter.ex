@@ -11,29 +11,24 @@ defmodule PullMode.Elements.Filter do
               ]
 
   @impl true
-  def handle_init(_opts) do
-    {:ok, %{}}
+  def handle_init(opts) do
+    Base.Filter.handle_init(opts)
   end
 
   @impl true
-  def handle_caps(:input, _caps, _context, state) do
-    {{:ok, caps: :any}, state}
+  def handle_caps(:input, caps, context, state) do
+    Base.Filter.handle_caps(:input, caps, context, state)
   end
 
   @impl true
-  def handle_demand(:output, size, :buffers, ctx, state) do
-    # if length(Enum.to_list(ctx.pads.input.input_queue.q)) > 0 do
-    # {:buffers, list} = Enum.at(Enum.to_list(ctx.pads.input.input_queue.q), 0)
-    # IO.puts(list)
-    # end
+  def handle_process(:input, buffer, ctx, state) do
+    {{:ok, actions}, state} = Base.Filter.handle_process(:input, buffer, ctx, state)
+    actions = actions ++ [redemand: :output]
+    {{:ok, actions}, state}
+  end
 
-    # IO.puts("============================")
-    # IO.inspect(Enum.count ctx.pads.input.input_queue.q)
+  @impl true
+  def handle_demand(:output, size, :buffers, _ctx, state) do
     {{:ok, demand: {:input, size}}, state}
-  end
-
-  @impl true
-  def handle_process(:input, buffer, _ctx, state) do
-    {{:ok, [buffer: {:output, [buffer]}, redemand: :output]}, state}
   end
 end
