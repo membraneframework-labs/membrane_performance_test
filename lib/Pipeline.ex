@@ -1,8 +1,7 @@
 defmodule Pipeline do
   use Membrane.Pipeline
   alias Membrane.ParentSpec
-  alias Contex.{Dataset, BarChart, Plot}
-
+  @toilet_capacity 400_000
   @impl true
   def handle_init(opts) do
     n = opts.n
@@ -20,7 +19,7 @@ defmodule Pipeline do
 
     links = [
       1..(n - 2)
-      |> Enum.reduce(ParentSpec.link(:source) |> via_in(:input, toilet_capacity: 400_000), fn i,
+      |> Enum.reduce(ParentSpec.link(:source) |> via_in(:input, toilet_capacity: @toilet_capacity), fn i,
                                                                                               link_acc ->
         ParentSpec.to(link_acc, String.to_atom("filter#{i}"))
       end)
