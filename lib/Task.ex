@@ -64,9 +64,9 @@ defmodule Mix.Tasks.PerformanceTest do
       options = %{
         n: n,
         source: nil,
-        filter: Module.concat(module, Elements.Filter).__struct__(id: -1, reductions: reductions),
+        filter: Module.concat(module, Filter).__struct__(id: -1, reductions: reductions),
         sink:
-          Module.concat(module, Elements.Sink).__struct__(
+          Module.concat(module, Sink).__struct__(
             tick: tick,
             how_many_tries: how_many_tries,
             numerator_of_probing_factor: @numerator_of_probing_factor,
@@ -86,7 +86,7 @@ defmodule Mix.Tasks.PerformanceTest do
         options = %{
           options
           | source:
-              Module.concat(module, Elements.Source).__struct__(
+              Module.concat(module, Source).__struct__(
                 initial_lower_bound: initial_lower_bound,
                 initial_upper_bound: initial_upper_bound
               )
@@ -106,7 +106,7 @@ defmodule Mix.Tasks.PerformanceTest do
         options = %{
           options
           | source:
-              Module.concat(module, Elements.Source).__struct__(
+              Module.concat(module, Source).__struct__(
                 initial_lower_bound: inital_generator_frequency,
                 initial_upper_bound: inital_generator_frequency
               )

@@ -1,20 +1,9 @@
-defmodule PullMode.Elements.Source do
-  use Membrane.Source
+defmodule AutoDemand.Source do
+  use Base.Source
 
   def_output_pad :output, caps: :any, demand_unit: :buffers
 
-  def_options initial_lower_bound: [
-                type: :integer,
-                spec: pos_integer,
-                description:
-                  "Initial lower bound for binsearching of the message generator frequency"
-              ],
-              initial_upper_bound: [
-                type: :integer,
-                spec: pos_integer,
-                description:
-                  "Initial upper bound for binsearching of the message generator frequency"
-              ]
+  def_options_with_default()
 
   @impl true
   def handle_init(opts) do

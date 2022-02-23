@@ -3,8 +3,7 @@ defmodule Utils do
     ref = Process.monitor(pid)
 
     receive do
-      {:DOWN, ^ref, :process, ^pid, _msg} ->
-        IO.puts("Exit from #{inspect(pid)}")
+      {:DOWN, ^ref, :process, ^pid, _msg} -> nil
     end
   end
 

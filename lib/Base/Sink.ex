@@ -5,6 +5,58 @@ defmodule Base.Sink do
   @statistics_path "stats.csv"
   @available_statistics [:throughput, :generator_frequency, :passing_time_avg, :passing_time_std, :tick, :tries_counter]
 
+
+  defmacro __using__(_opts) do
+    quote do
+      use Membrane.Sink
+      import Base.Sink, only: [def_options_with_default: 1, def_options_with_default: 0]
+    end
+  end
+
+
+  defmacro def_options_with_default(further_options\\[]) do
+    quote do
+      def_options [unquote_splicing(further_options),
+        tick: [
+          type: :integer,
+          spec: pos_integer,
+          description:
+            "Positive integer, describing number of ticks after which the message to count evaluate the throughput should be send"
+        ],
+        how_many_tries: [
+          type: :integer,
+          spec: pos_integer,
+          description: "Positive integer, indicating how many meassurements should be made"
+        ],
+        numerator_of_probing_factor: [
+          type: :integer,
+          spec: pos_integer,
+          description:
+            "Numerator of the probing factor: X/Y meaning that X out of Y message passing times will be saved in the state."
+        ],
+        denominator_of_probing_factor: [
+          type: :integer,
+          spec: pos_integer,
+          description:
+            "Denominator of the probing factor: X/Y meaning that X out of Y message passing times will be saved in the state."
+        ],
+        should_produce_plots?: [
+          type: :boolean,
+          description:
+            "True, if the result.svg containing the plot of the passing times for the messages should be printed, false otherwise"
+        ],
+        output_directory: [
+          type: :string,
+          description: "Path to the directory where the results will be stored"
+        ],
+        supervisor_pid: [type: :pid],
+        statistics: [type: :list],
+        provide_statistics_header?: [type: :boolean]
+      ]
+    end
+  end
+
+
   def handle_init(opts) do
     statistics = opts.statistics |> Enum.filter(fn key -> key in @available_statistics end)
 

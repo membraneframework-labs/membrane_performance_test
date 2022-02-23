@@ -5,6 +5,35 @@ defmodule Base.Source do
   @message :crypto.strong_rand_bytes(1000)
   @interval 10
 
+
+  defmacro __using__(_opts) do
+    quote do
+      use Membrane.Source
+      import Base.Source, only: [def_options_with_default: 1, def_options_with_default: 0]
+    end
+  end
+
+
+  defmacro def_options_with_default(further_options\\[]) do
+    quote do
+      def_options [unquote_splicing(further_options),
+        initial_lower_bound: [
+          type: :integer,
+          spec: pos_integer,
+          description:
+            "Initial lower bound for binsearching of the message generator frequency"
+        ],
+        initial_upper_bound: [
+          type: :integer,
+          spec: pos_integer,
+          description:
+            "Initial upper bound for binsearching of the message generator frequency"
+        ]
+      ]
+    end
+  end
+
+
   def handle_init(opts) do
     messages_per_second = ((opts.initial_lower_bound + opts.initial_upper_bound) / 2) |> trunc()
     messages_per_interval = (messages_per_second * @interval / 1000) |> trunc()
