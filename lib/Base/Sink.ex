@@ -3,7 +3,7 @@ defmodule Base.Sink do
 
   @plot_path "plot.svg"
   @statistics_path "stats.csv"
-  @available_statistics [:throughput, :generator_frequency, :avg, :std, :tick, :tries_counter]
+  @available_statistics [:throughput, :generator_frequency, :passing_time_avg, :passing_time_std, :tick, :tries_counter]
 
   def handle_init(opts) do
     statistics = opts.statistics |> Enum.filter(fn key -> key in @available_statistics end)
@@ -25,8 +25,8 @@ defmodule Base.Sink do
       output_directory: opts.output_directory,
       supervisor_pid: opts.supervisor_pid,
       statistics: statistics,
-      avg: 0,
-      std: 0,
+      passing_time_avg: 0,
+      passing_time_std: 0,
       generator_frequency: 0
     }
 
@@ -67,23 +67,23 @@ defmodule Base.Sink do
         _ctx,
         state = %{status: :flushing}
       ) do
-    avg = state.sum / state.message_count
+    passing_time_avg = state.sum / state.message_count
 
-    std =
+    passing_time_std =
       :math.sqrt(
-        (state.squares_sum + state.message_count * avg * avg - 2 * avg * state.sum) /
+        (state.squares_sum + state.message_count * passing_time_avg * passing_time_avg - 2 * passing_time_avg * state.sum) /
           (state.message_count - 1)
       )
 
-    state = %{state | avg: avg, std: std, generator_frequency: generator_frequency}
+    state = %{state | passing_time_avg: passing_time_avg, passing_time_std: passing_time_std, generator_frequency: generator_frequency}
 
     write_demanded_statistics(state)
 
     specification =
       check_normality(
         state.times,
-        avg,
-        std,
+        passing_time_avg,
+        passing_time_std,
         state.throughput,
         generator_frequency,
         state.tries_counter
@@ -122,15 +122,15 @@ defmodule Base.Sink do
     {{:ok, actions}, state}
   end
 
-  defp check_normality(_times, avg, std, _throughput, generator_frequency, try_no) do
+  defp check_normality(_times, passing_time_avg, passing_time_std, _throughput, generator_frequency, try_no) do
     cond do
       try_no == 0 ->
         :the_same
 
-      avg > 20_000_000 ->
+      passing_time_avg > 20_000_000 ->
         :slower
 
-      std > 10_000_000 and std > 0.5 * avg ->
+      passing_time_std > 10_000_000 and passing_time_std > 0.5 * passing_time_avg ->
         :slower
 
       true ->
@@ -144,7 +144,7 @@ defmodule Base.Sink do
     File.write(@statistics_path, content, [:append])
 
     if state.should_produce_plots? do
-      output = Utils.prepare_plot(state.times, state.avg, state.std)
+      output = Utils.prepare_plot(state.times, state.passing_time_avg, state.passing_time_std)
       File.write!(Integer.to_string(state.tries_counter) <> "_" <> @plot_path, output)
     end
   end
