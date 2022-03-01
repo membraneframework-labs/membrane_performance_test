@@ -44,78 +44,83 @@ defmodule Mix.Tasks.PerformanceTest do
       statistics = Keyword.get(options, :statistics) |> parse_statistics()
       reductions = Keyword.get(options, :reductions)
       [output_directory_path] = arguments
+      launch_test(mode: mode, n: n, how_many_tries: how_many_tries, tick: tick, inital_generator_frequency: inital_generator_frequency, should_adjust_generator_frequency: should_adjust_generator_frequency,
+      should_produce_plots: should_produce_plots, should_provide_statistics_header: should_provide_statistics_header, statistics: statistics, reductions: reductions, output_directory_path: output_directory_path)
 
-      module =
-        case mode do
-          "pull" ->
-            PullMode
+    end
+  end
 
-          "push" ->
-            PushMode
+  def launch_test(opts) do
+    module =
+      case opts.mode do
+        "pull" ->
+          PullMode
 
-          "autodemand" ->
-            AutoDemand
+        "push" ->
+          PushMode
 
-          value ->
-            IO.puts("Unknown mode: #{value}")
-            IO.puts(@syntax_error_message)
-        end
+        "autodemand" ->
+          AutoDemand
+
+        value ->
+          IO.puts("Unknown mode: #{value}")
+          IO.puts(@syntax_error_message)
+      end
+
+    options = %{
+      n: opts.n,
+      source: nil,
+      filter: Module.concat(module, Filter).__struct__(id: -1, reductions: opts.reductions),
+      sink:
+        Module.concat(module, Sink).__struct__(
+          tick: opts.tick,
+          how_many_tries: opts.how_many_tries,
+          numerator_of_probing_factor: @numerator_of_probing_factor,
+          denominator_of_probing_factor: @denominator_of_probing_factor,
+          should_produce_plots?: opts.should_produce_plots,
+          output_directory: opts.output_directory_path,
+          supervisor_pid: self(),
+          statistics: opts.statistics,
+          provide_statistics_header?: opts.should_provide_statistics_header
+        )
+    }
+
+    if opts.should_adjust_generator_frequency do
+      initial_lower_bound = 0
+      initial_upper_bound = opts.inital_generator_frequency * 2
 
       options = %{
-        n: n,
-        source: nil,
-        filter: Module.concat(module, Filter).__struct__(id: -1, reductions: reductions),
-        sink:
-          Module.concat(module, Sink).__struct__(
-            tick: tick,
-            how_many_tries: how_many_tries,
-            numerator_of_probing_factor: @numerator_of_probing_factor,
-            denominator_of_probing_factor: @denominator_of_probing_factor,
-            should_produce_plots?: should_produce_plots,
-            output_directory: output_directory_path,
-            supervisor_pid: self(),
-            statistics: statistics,
-            provide_statistics_header?: should_provide_statistics_header
-          )
+        options
+        | source:
+            Module.concat(module, Source).__struct__(
+              initial_lower_bound: initial_lower_bound,
+              initial_upper_bound: initial_upper_bound
+            )
       }
 
-      if should_adjust_generator_frequency do
-        initial_lower_bound = 0
-        initial_upper_bound = inital_generator_frequency * 2
+      {:ok, pid} = Pipeline.start_link(options)
+      Pipeline.play(pid)
 
-        options = %{
-          options
-          | source:
-              Module.concat(module, Source).__struct__(
-                initial_lower_bound: initial_lower_bound,
-                initial_upper_bound: initial_upper_bound
-              )
-        }
+      frequency =
+        receive do
+          {:generator_frequency_found, generator_frequency} ->
+            generator_frequency
+        end
 
-        {:ok, pid} = Pipeline.start_link(options)
-        Pipeline.play(pid)
+      IO.puts(frequency)
+    else
+      options = %{
+        options
+        | source:
+            Module.concat(module, Source).__struct__(
+              initial_lower_bound: opts.inital_generator_frequency,
+              initial_upper_bound: opts.inital_generator_frequency
+            )
+      }
 
-        frequency =
-          receive do
-            {:generator_frequency_found, generator_frequency} ->
-              generator_frequency
-          end
-
-        IO.puts(frequency)
-      else
-        options = %{
-          options
-          | source:
-              Module.concat(module, Source).__struct__(
-                initial_lower_bound: inital_generator_frequency,
-                initial_upper_bound: inital_generator_frequency
-              )
-        }
-
-        {:ok, pid} = Pipeline.start_link(options)
-        Pipeline.play(pid)
-        Utils.wait_for_complete(pid)
-      end
+      {:ok, pid} = Pipeline.start_link(options)
+      Pipeline.play(pid)
+      Utils.wait_for_complete(pid)
     end
   end
 
