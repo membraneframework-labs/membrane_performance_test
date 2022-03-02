@@ -193,11 +193,11 @@ defmodule Base.Sink do
   defp write_demanded_statistics(state) do
     content = state.statistics |> Enum.map(fn key -> Map.get(state, key) end) |> Enum.join(",")
     content = content <> "\n"
-    File.write(@statistics_path, content, [:append])
+    File.write(Path.join(state.output_directory, @statistics_path), content, [:append])
 
     if state.should_produce_plots? do
       output = Utils.prepare_plot(state.times, state.passing_time_avg, state.passing_time_std)
-      File.write!(Integer.to_string(state.tries_counter) <> "_" <> @plot_path, output)
+      File.write!(Path.join(state.output_directory,(Integer.to_string(state.tries_counter) <> "_" <> @plot_path)), output)
     end
   end
 
