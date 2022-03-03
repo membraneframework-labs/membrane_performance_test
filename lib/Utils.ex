@@ -24,4 +24,28 @@ defmodule Utils do
     {:safe, output} = Contex.Plot.to_svg(plot)
     output
   end
+
+  def save_statistics(statistics, statistics_names, path, should_provide_statistics_header) do
+    if should_provide_statistics_header do
+      provide_results_file_header(statistics_names, path)
+    end
+
+    content  = statistics |> Enum.map(fn one_try_statistics -> one_try_statistics |> Enum.map(fn {_key, value}->value end)  |> Enum.join(",") end) |> Enum.join("\n")
+
+    File.write(
+      path,
+      content,
+      [:append]
+    )
+  end
+
+  defp provide_results_file_header(statistics_names, path) do
+    content = (statistics_names |> Enum.join(",")) <> "\n"
+
+    File.write(
+      path,
+      content,
+      [:append]
+    )
+  end
 end

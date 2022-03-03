@@ -21,7 +21,8 @@ defmodule Mix.Tasks.PerformanceTest do
     shouldProducePlots: :boolean,
     shouldProvideStatisticsHeader: :boolean
   ]
-
+  @statistics_filename "stats.csv"
+  @plots_directory "plots"
   def run(args) do
     {options, arguments, errors} =
       OptionParser.parse(args, strict: @strict_keywords_list ++ @optional_keywords_list)
@@ -45,7 +46,7 @@ defmodule Mix.Tasks.PerformanceTest do
       reductions = Keyword.get(options, :reductions)
       [output_directory_path] = arguments
 
-      launch_test(%{
+      result_statistics = launch_test(%{
         mode: mode,
         n: n,
         how_many_tries: how_many_tries,
@@ -53,11 +54,12 @@ defmodule Mix.Tasks.PerformanceTest do
         inital_generator_frequency: inital_generator_frequency,
         should_adjust_generator_frequency: should_adjust_generator_frequency,
         should_produce_plots: should_produce_plots,
-        should_provide_statistics_header: should_provide_statistics_header,
         statistics: statistics,
         reductions: reductions,
-        output_directory_path: output_directory_path
+        plots_path: Path.join(output_directory_path, @plots_directory)
       })
+
+      Utils.save_statistics(result_statistics, statistics, Path.join(output_directory_path, @statistics_filename), should_provide_statistics_header)
     end
   end
 
@@ -66,13 +68,10 @@ defmodule Mix.Tasks.PerformanceTest do
       case opts.mode do
         "pull" ->
           PullMode
-
         "push" ->
           PushMode
-
         "autodemand" ->
           AutoDemand
-
         value ->
           IO.puts("Unknown mode: #{value}")
           IO.puts(@syntax_error_message)
@@ -89,10 +88,9 @@ defmodule Mix.Tasks.PerformanceTest do
           numerator_of_probing_factor: @numerator_of_probing_factor,
           denominator_of_probing_factor: @denominator_of_probing_factor,
           should_produce_plots?: opts.should_produce_plots,
-          output_directory: opts.output_directory_path,
+          plots_path: opts.plots_path,
           supervisor_pid: self(),
-          statistics: opts.statistics,
-          provide_statistics_header?: opts.should_provide_statistics_header
+          statistics: opts.statistics
         )
     }
 
@@ -108,7 +106,6 @@ defmodule Mix.Tasks.PerformanceTest do
               initial_upper_bound: initial_upper_bound
             )
       }
-
       {:ok, pid} = Pipeline.start_link(options)
       Pipeline.play(pid)
 
@@ -124,7 +121,6 @@ defmodule Mix.Tasks.PerformanceTest do
               initial_upper_bound: opts.inital_generator_frequency
             )
       }
-
       {:ok, pid} = Pipeline.start_link(options)
       Pipeline.play(pid)
       receive do

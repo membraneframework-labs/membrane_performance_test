@@ -11,10 +11,9 @@ defmodule Test.PerformanceTest do
       inital_generator_frequency: 5_000,
       should_adjust_generator_frequency: true,
       should_produce_plots: false,
-      should_provide_statistics_header: true,
       statistics: [:generator_frequency],
       reductions: 1_000,
-      output_directory_path: "/project/results"
+      plots_path: "/project/results/plots"
     }
 
     [generator_frequency: frequency] = List.last(Mix.Tasks.PerformanceTest.launch_test(opts))

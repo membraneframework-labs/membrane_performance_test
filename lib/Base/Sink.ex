@@ -1,16 +1,15 @@
 defmodule Base.Sink do
   alias Membrane.Buffer
 
-  @plot_path "plot.svg"
-  @statistics_path "stats.csv"
   @available_statistics [
     :throughput,
     :generator_frequency,
     :passing_time_avg,
     :passing_time_std,
-    :tick,
-    :tries_counter
+    #:tick,
+    #:tries_counter
   ]
+  @plot_filename "plot.svg"
 
   defmacro __using__(_opts) do
     quote do
@@ -51,46 +50,47 @@ defmodule Base.Sink do
           description:
             "True, if the result.svg containing the plot of the passing times for the messages should be printed, false otherwise"
         ],
-        output_directory: [
+        plots_path: [
           type: :string,
-          description: "Path to the directory where the results will be stored"
+          description: "Path to the directory where the result plots should be stored"
         ],
         supervisor_pid: [type: :pid],
-        statistics: [type: :list],
-        provide_statistics_header?: [type: :boolean]
+        statistics: [type: :list]
       ]
     end
   end
 
   def handle_init(opts) do
     statistics = opts.statistics |> Enum.filter(fn key -> key in @available_statistics end)
-
+    #opts = %{opts| statistics: statistics}
     state = %{
-      message_count: 0,
-      start_time: 0,
-      tick: opts.tick,
-      how_many_tries: opts.how_many_tries,
-      tries_counter: 0,
-      sum: 0,
-      squares_sum: 0,
-      times: [],
-      numerator_of_probing_factor: opts.numerator_of_probing_factor,
-      denominator_of_probing_factor: opts.denominator_of_probing_factor,
-      status: :playing,
-      throughput: 0,
-      should_produce_plots?: opts.should_produce_plots?,
-      output_directory: opts.output_directory,
-      supervisor_pid: opts.supervisor_pid,
-      statistics: statistics,
-      passing_time_avg: 0,
-      passing_time_std: 0,
-      generator_frequency: 0,
-      result_statistics: []
-    }
+      opts: opts,
+      metrics: nil,
+      single_try_state: nil,
+      global_state: nil,
 
-    if opts.provide_statistics_header? do
-      provide_results_file_header(state)
-    end
+
+      message_count: 0,#SINGLE_STATE
+      start_time: 0,#SINGLE_STATE
+      tick: opts.tick,#OPTS
+      how_many_tries: opts.how_many_tries,#OPTS
+      tries_counter: 0,#GLOBAL_STATE
+      sum: 0,#SINGLE_STATE
+      squares_sum: 0,#SINGLE_STATE
+      times: [],#SINGLE_STATE
+      numerator_of_probing_factor: opts.numerator_of_probing_factor,#OPTS
+      denominator_of_probing_factor: opts.denominator_of_probing_factor,#OPTS
+      status: :playing,#SINGLE_STATE
+      throughput: 0,#METRICS
+      should_produce_plots?: opts.should_produce_plots?,#OPTS
+      plots_path: opts.plots_path,#OPTS
+      supervisor_pid: opts.supervisor_pid,#OPTS
+      statistics: statistics,#OPTS
+      passing_time_avg: 0,#METRICS
+      passing_time_std: 0,#METRICS
+      generator_frequency: 0,#METRICS
+      result_statistics: []#GLOBAL_STATE
+    }
 
     {:ok, state}
   end
@@ -210,17 +210,13 @@ defmodule Base.Sink do
   end
 
   defp write_demanded_statistics(state) do
-    content = state.statistics |> Enum.map(fn key -> Map.get(state, key) end) |> Enum.join(",")
-    content = content <> "\n"
-    File.write(Path.join(state.output_directory, @statistics_path), content, [:append])
-
     if state.should_produce_plots? do
       output = Utils.prepare_plot(state.times, state.passing_time_avg, state.passing_time_std)
 
       File.write!(
         Path.join(
-          state.output_directory,
-          Integer.to_string(state.tries_counter) <> "_" <> @plot_path
+          state.plots_path,
+          Integer.to_string(state.tries_counter) <> "_" <> @plot_filename
         ),
         output
       )
@@ -230,13 +226,4 @@ defmodule Base.Sink do
     state
   end
 
-  defp provide_results_file_header(state) do
-    content = (state.statistics |> Enum.join(",")) <> "\n"
-
-    File.write(
-      @statistics_path,
-      content,
-      [:append]
-    )
-  end
 end
