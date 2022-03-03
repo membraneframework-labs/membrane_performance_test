@@ -30,7 +30,12 @@ defmodule Utils do
       provide_results_file_header(metrics_names, path)
     end
 
-    content  = metrics |> Enum.map(fn one_try_metrics -> one_try_metrics |> Enum.map(fn {_key, value}->value end)  |> Enum.join(",") end) |> Enum.join("\n")
+    content =
+      metrics
+      |> Enum.map(fn one_try_metrics ->
+        one_try_metrics |> Enum.map(fn {_key, value} -> value end) |> Enum.join(",")
+      end)
+      |> Enum.join("\n")
 
     File.write(
       path,

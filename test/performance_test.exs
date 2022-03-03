@@ -17,8 +17,15 @@ defmodule Test.PerformanceTest do
     }
 
     [generator_frequency: frequency] = List.last(Mix.Tasks.PerformanceTest.launch_test(opts))
-    opts = %{opts| inital_generator_frequency: frequency, should_adjust_generator_frequency: false, metrics: [:throughput], how_many_tries: 0}
-    IO.inspect(Mix.Tasks.PerformanceTest.launch_test(opts))
 
+    opts = %{
+      opts
+      | inital_generator_frequency: frequency,
+        should_adjust_generator_frequency: false,
+        metrics: [:throughput],
+        how_many_tries: 0
+    }
+
+    IO.inspect(Mix.Tasks.PerformanceTest.launch_test(opts))
   end
 end

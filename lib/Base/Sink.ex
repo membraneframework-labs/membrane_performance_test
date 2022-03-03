@@ -5,9 +5,9 @@ defmodule Base.Sink do
     :throughput,
     :generator_frequency,
     :passing_time_avg,
-    :passing_time_std,
-    #:tick,
-    #:tries_counter
+    :passing_time_std
+    # :tick,
+    # :tries_counter
   ]
   @plot_filename "plot.svg"
 
@@ -62,34 +62,20 @@ defmodule Base.Sink do
 
   def handle_init(opts) do
     metrics = opts.metrics |> Enum.filter(fn key -> key in @available_metrics end)
-    #opts = %{opts| metrics: metrics}
+    opts = %{opts | metrics: metrics}
+
     state = %{
-      #opts: opts,
-      #metrics: nil,
-      #single_try_state: nil,
-      #global_state: nil,
-
-
-      message_count: 0,#SINGLE_STATE
-      start_time: 0,#SINGLE_STATE
-      tick: opts.tick,#OPTS
-      how_many_tries: opts.how_many_tries,#OPTS
-      tries_counter: 0,#GLOBAL_STATE
-      sum: 0,#SINGLE_STATE
-      squares_sum: 0,#SINGLE_STATE
-      times: [],#SINGLE_STATE
-      numerator_of_probing_factor: opts.numerator_of_probing_factor,#OPTS
-      denominator_of_probing_factor: opts.denominator_of_probing_factor,#OPTS
-      status: :playing,#SINGLE_STATE
-      throughput: 0,#METRICS
-      should_produce_plots?: opts.should_produce_plots?,#OPTS
-      plots_path: opts.plots_path,#OPTS
-      supervisor_pid: opts.supervisor_pid,#OPTS
-      metrics: metrics,#OPTS
-      passing_time_avg: 0,#METRICS
-      passing_time_std: 0,#METRICS
-      generator_frequency: 0,#METRICS
-      result_metrics: []#GLOBAL_STATE
+      status: :playing,
+      opts: opts,
+      metrics: %{throughput: 0, passing_time_avg: 0, passing_time_std: 0, generator_frequency: 0},
+      single_try_state: %{
+        message_count: 0,
+        start_time: 0,
+        sum: 0,
+        squares_sum: 0,
+        times: []
+      },
+      global_state: %{result_metrics: [], tries_counter: 0}
     }
 
     {:ok, state}
@@ -97,9 +83,16 @@ defmodule Base.Sink do
 
   def handle_write(:input, buffer, _context, state = %{status: :playing}) do
     state =
-      if state.message_count == 0 do
-        Process.send_after(self(), :tick, state.tick)
-        %{state | start_time: Membrane.Time.monotonic_time()}
+      if state.single_try_state.message_count == 0 do
+        Process.send_after(self(), :tick, state.opts.tick)
+
+        %{
+          state
+          | single_try_state: %{
+              state.single_try_state
+              | start_time: Membrane.Time.monotonic_time()
+            }
+        }
       else
         state
       end
@@ -107,16 +100,24 @@ defmodule Base.Sink do
     time = Membrane.Time.monotonic_time() - buffer.dts
 
     state =
-      if :rand.uniform(state.denominator_of_probing_factor) <= state.numerator_of_probing_factor do
-        Map.update!(state, :times, &[{buffer.dts - state.start_time, time} | &1])
+      if :rand.uniform(state.opts.denominator_of_probing_factor) <=
+           state.opts.numerator_of_probing_factor do
+        single_try_state =
+          Map.update!(
+            state.single_try_state,
+            :times,
+            &[{buffer.dts - state.single_try_state.start_time, time} | &1]
+          )
+
+        %{state | single_try_state: single_try_state}
       else
         state
       end
 
-    state = Map.update!(state, :message_count, &(&1 + 1))
-    state = Map.update!(state, :sum, &(&1 + time))
-    state = Map.update!(state, :squares_sum, &(&1 + time * time))
-    {{:ok, []}, state}
+    single_try_state = Map.update!(state.single_try_state, :message_count, &(&1 + 1))
+    single_try_state = Map.update!(single_try_state, :sum, &(&1 + time))
+    single_try_state = Map.update!(single_try_state, :squares_sum, &(&1 + time * time))
+    {{:ok, []}, %{state | single_try_state: single_try_state}}
   end
 
   def handle_write(
@@ -125,37 +126,45 @@ defmodule Base.Sink do
         _ctx,
         state = %{status: :flushing}
       ) do
-    passing_time_avg = state.sum / state.message_count
+    passing_time_avg = state.single_try_state.sum / state.single_try_state.message_count
 
     passing_time_std =
       :math.sqrt(
-        (state.squares_sum + state.message_count * passing_time_avg * passing_time_avg -
-           2 * passing_time_avg * state.sum) /
-          (state.message_count - 1)
+        (state.single_try_state.squares_sum +
+           state.single_try_state.message_count * passing_time_avg * passing_time_avg -
+           2 * passing_time_avg * state.single_try_state.sum) /
+          (state.single_try_state.message_count - 1)
       )
 
     state = %{
       state
-      | passing_time_avg: passing_time_avg,
-        passing_time_std: passing_time_std,
-        generator_frequency: generator_frequency
+      | metrics: %{
+          state.metrics
+          | passing_time_avg: passing_time_avg,
+            passing_time_std: passing_time_std,
+            generator_frequency: generator_frequency
+        }
     }
 
     state = write_demanded_metrics(state)
 
     specification =
       check_normality(
-        state.times,
+        state.single_try_state.times,
         passing_time_avg,
         passing_time_std,
-        state.throughput,
+        state.metrics.throughput,
         generator_frequency,
-        state.tries_counter
+        state.global_state.tries_counter
       )
 
     actions =
-      if state.tries_counter == state.how_many_tries do
-        send(state.supervisor_pid, {:result_metrics, Enum.reverse(state.result_metrics)})
+      if state.global_state.tries_counter == state.opts.how_many_tries do
+        send(
+          state.opts.supervisor_pid,
+          {:result_metrics, Enum.reverse(state.global_state.result_metrics)}
+        )
+
         [notify: :stop]
       else
         [notify: {:play, specification}]
@@ -163,12 +172,15 @@ defmodule Base.Sink do
 
     state = %{
       state
-      | message_count: 0,
-        sum: 0,
-        squares_sum: 0,
-        times: [],
-        tries_counter: state.tries_counter + 1,
-        status: :playing
+      | single_try_state: %{
+          state.single_try_state
+          | message_count: 0,
+            sum: 0,
+            squares_sum: 0,
+            times: []
+        },
+        status: :playing,
+        global_state: %{state.global_state | tries_counter: state.global_state.tries_counter + 1}
     }
 
     {{:ok, actions}, state}
@@ -179,10 +191,13 @@ defmodule Base.Sink do
   end
 
   def handle_other(:tick, _ctx, state) do
-    elapsed = (Membrane.Time.monotonic_time() - state.start_time) / Membrane.Time.second()
-    throughput = state.message_count / elapsed
+    elapsed =
+      (Membrane.Time.monotonic_time() - state.single_try_state.start_time) /
+        Membrane.Time.second()
+
+    throughput = state.single_try_state.message_count / elapsed
     {actions, state} = {[notify: :flush], %{state | status: :flushing}}
-    state = %{state | throughput: throughput}
+    state = %{state | metrics: %{state.metrics | throughput: throughput}}
     {{:ok, actions}, state}
   end
 
@@ -210,20 +225,33 @@ defmodule Base.Sink do
   end
 
   defp write_demanded_metrics(state) do
-    if state.should_produce_plots? do
-      output = Utils.prepare_plot(state.times, state.passing_time_avg, state.passing_time_std)
+    if state.opts.should_produce_plots? do
+      output =
+        Utils.prepare_plot(
+          state.single_try_state.times,
+          state.metrics.passing_time_avg,
+          state.metrics.passing_time_std
+        )
 
       File.write!(
         Path.join(
-          state.plots_path,
-          Integer.to_string(state.tries_counter) <> "_" <> @plot_filename
+          state.opts.plots_path,
+          Integer.to_string(state.global_state.tries_counter) <> "_" <> @plot_filename
         ),
         output
       )
     end
-    new_metrics = state.metrics |> Enum.map(fn key -> {key, Map.get(state, key)} end )
-    state = %{state| result_metrics: [new_metrics| state.result_metrics]}
+
+    new_metrics = state.opts.metrics |> Enum.map(fn key -> {key, Map.get(state.metrics, key)} end)
+
+    state = %{
+      state
+      | global_state: %{
+          state.global_state
+          | result_metrics: [new_metrics | state.global_state.result_metrics]
+        }
+    }
+
     state
   end
-
 end

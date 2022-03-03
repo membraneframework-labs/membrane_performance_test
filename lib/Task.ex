@@ -46,20 +46,26 @@ defmodule Mix.Tasks.PerformanceTest do
       reductions = Keyword.get(options, :reductions)
       [output_directory_path] = arguments
 
-      result_metrics = launch_test(%{
-        mode: mode,
-        n: n,
-        how_many_tries: how_many_tries,
-        tick: tick,
-        inital_generator_frequency: inital_generator_frequency,
-        should_adjust_generator_frequency: should_adjust_generator_frequency,
-        should_produce_plots: should_produce_plots,
-        metrics: metrics,
-        reductions: reductions,
-        plots_path: Path.join(output_directory_path, @plots_directory)
-      })
+      result_metrics =
+        launch_test(%{
+          mode: mode,
+          n: n,
+          how_many_tries: how_many_tries,
+          tick: tick,
+          inital_generator_frequency: inital_generator_frequency,
+          should_adjust_generator_frequency: should_adjust_generator_frequency,
+          should_produce_plots: should_produce_plots,
+          metrics: metrics,
+          reductions: reductions,
+          plots_path: Path.join(output_directory_path, @plots_directory)
+        })
 
-      Utils.save_metrics(result_metrics, metrics, Path.join(output_directory_path, @metrics_filename), should_provide_metrics_header)
+      Utils.save_metrics(
+        result_metrics,
+        metrics,
+        Path.join(output_directory_path, @metrics_filename),
+        should_provide_metrics_header
+      )
     end
   end
 
@@ -68,10 +74,13 @@ defmodule Mix.Tasks.PerformanceTest do
       case opts.mode do
         "pull" ->
           PullMode
+
         "push" ->
           PushMode
+
         "autodemand" ->
           AutoDemand
+
         value ->
           IO.puts("Unknown mode: #{value}")
           IO.puts(@syntax_error_message)
@@ -106,6 +115,7 @@ defmodule Mix.Tasks.PerformanceTest do
               initial_upper_bound: initial_upper_bound
             )
       }
+
       {:ok, pid} = Pipeline.start_link(options)
       Pipeline.play(pid)
 
@@ -121,8 +131,10 @@ defmodule Mix.Tasks.PerformanceTest do
               initial_upper_bound: opts.inital_generator_frequency
             )
       }
+
       {:ok, pid} = Pipeline.start_link(options)
       Pipeline.play(pid)
+
       receive do
         {:result_metrics, result_metrics} -> result_metrics
       end
