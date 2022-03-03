@@ -65,7 +65,6 @@ defmodule Base.Sink do
     opts = %{opts | metrics: metrics}
 
     state = %{
-      status: :playing,
       opts: opts,
       metrics: %{throughput: 0, passing_time_avg: 0, passing_time_std: 0, generator_frequency: 0},
       single_try_state: %{
@@ -75,13 +74,13 @@ defmodule Base.Sink do
         squares_sum: 0,
         times: []
       },
-      global_state: %{result_metrics: [], tries_counter: 0}
+      global_state: %{result_metrics: [], tries_counter: 0, status: :playing}
     }
 
     {:ok, state}
   end
 
-  def handle_write(:input, buffer, _context, state = %{status: :playing}) do
+  def handle_write(:input, buffer, _context, state) when state.global_state.status == :playing do
     state =
       if state.single_try_state.message_count == 0 do
         Process.send_after(self(), :tick, state.opts.tick)
@@ -124,8 +123,9 @@ defmodule Base.Sink do
         :input,
         %Buffer{payload: :flush, metadata: generator_frequency},
         _ctx,
-        state = %{status: :flushing}
-      ) do
+        state
+      )
+      when state.global_state.status == :flushing do
     passing_time_avg = state.single_try_state.sum / state.single_try_state.message_count
 
     passing_time_std =
@@ -179,14 +179,17 @@ defmodule Base.Sink do
             squares_sum: 0,
             times: []
         },
-        status: :playing,
-        global_state: %{state.global_state | tries_counter: state.global_state.tries_counter + 1}
+        global_state: %{
+          state.global_state
+          | tries_counter: state.global_state.tries_counter + 1,
+            status: :playing
+        }
     }
 
     {{:ok, actions}, state}
   end
 
-  def handle_write(:input, _msg, _ctx, state = %{status: :flushing}) do
+  def handle_write(:input, _msg, _ctx, state) when state.global_state.status == :flushing do
     {{:ok, []}, state}
   end
 
@@ -196,7 +199,10 @@ defmodule Base.Sink do
         Membrane.Time.second()
 
     throughput = state.single_try_state.message_count / elapsed
-    {actions, state} = {[notify: :flush], %{state | status: :flushing}}
+
+    {actions, state} =
+      {[notify: :flush], %{state | global_state: %{state.global_state | status: :flushing}}}
+
     state = %{state | metrics: %{state.metrics | throughput: throughput}}
     {{:ok, actions}, state}
   end
