@@ -3,8 +3,14 @@ defmodule Base.Sink do
 
   @plot_path "plot.svg"
   @statistics_path "stats.csv"
-  @available_statistics [:throughput, :generator_frequency, :passing_time_avg, :passing_time_std, :tick, :tries_counter]
-
+  @available_statistics [
+    :throughput,
+    :generator_frequency,
+    :passing_time_avg,
+    :passing_time_std,
+    :tick,
+    :tries_counter
+  ]
 
   defmacro __using__(_opts) do
     quote do
@@ -13,10 +19,10 @@ defmodule Base.Sink do
     end
   end
 
-
-  defmacro def_options_with_default(further_options\\[]) do
+  defmacro def_options_with_default(further_options \\ []) do
     quote do
-      def_options [unquote_splicing(further_options),
+      def_options [
+        unquote_splicing(further_options),
         tick: [
           type: :integer,
           spec: pos_integer,
@@ -56,7 +62,6 @@ defmodule Base.Sink do
     end
   end
 
-
   def handle_init(opts) do
     statistics = opts.statistics |> Enum.filter(fn key -> key in @available_statistics end)
 
@@ -79,7 +84,8 @@ defmodule Base.Sink do
       statistics: statistics,
       passing_time_avg: 0,
       passing_time_std: 0,
-      generator_frequency: 0
+      generator_frequency: 0,
+      result_statistics: []
     }
 
     if opts.provide_statistics_header? do
@@ -123,13 +129,19 @@ defmodule Base.Sink do
 
     passing_time_std =
       :math.sqrt(
-        (state.squares_sum + state.message_count * passing_time_avg * passing_time_avg - 2 * passing_time_avg * state.sum) /
+        (state.squares_sum + state.message_count * passing_time_avg * passing_time_avg -
+           2 * passing_time_avg * state.sum) /
           (state.message_count - 1)
       )
 
-    state = %{state | passing_time_avg: passing_time_avg, passing_time_std: passing_time_std, generator_frequency: generator_frequency}
+    state = %{
+      state
+      | passing_time_avg: passing_time_avg,
+        passing_time_std: passing_time_std,
+        generator_frequency: generator_frequency
+    }
 
-    write_demanded_statistics(state)
+    state = write_demanded_statistics(state)
 
     specification =
       check_normality(
@@ -143,7 +155,7 @@ defmodule Base.Sink do
 
     actions =
       if state.tries_counter == state.how_many_tries do
-        send(state.supervisor_pid, {:generator_frequency_found, generator_frequency})
+        send(state.supervisor_pid, {:result_statistics, Enum.reverse(state.result_statistics)})
         [notify: :stop]
       else
         [notify: {:play, specification}]
@@ -174,7 +186,14 @@ defmodule Base.Sink do
     {{:ok, actions}, state}
   end
 
-  defp check_normality(_times, passing_time_avg, passing_time_std, _throughput, generator_frequency, try_no) do
+  defp check_normality(
+         _times,
+         passing_time_avg,
+         passing_time_std,
+         _throughput,
+         _generator_frequency,
+         try_no
+       ) do
     cond do
       try_no == 0 ->
         :the_same
@@ -197,8 +216,18 @@ defmodule Base.Sink do
 
     if state.should_produce_plots? do
       output = Utils.prepare_plot(state.times, state.passing_time_avg, state.passing_time_std)
-      File.write!(Path.join(state.output_directory,(Integer.to_string(state.tries_counter) <> "_" <> @plot_path)), output)
+
+      File.write!(
+        Path.join(
+          state.output_directory,
+          Integer.to_string(state.tries_counter) <> "_" <> @plot_path
+        ),
+        output
+      )
     end
+    new_statistics = state.statistics |> Enum.map(fn key -> {key, Map.get(state, key)} end )
+    state = %{state| result_statistics: [new_statistics| state.result_statistics]}
+    state
   end
 
   defp provide_results_file_header(state) do

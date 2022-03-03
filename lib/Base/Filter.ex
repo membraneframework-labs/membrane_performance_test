@@ -1,6 +1,4 @@
 defmodule Base.Filter do
-
-
   defmacro __using__(_opts) do
     quote do
       use Membrane.Filter
@@ -8,10 +6,10 @@ defmodule Base.Filter do
     end
   end
 
-
-  defmacro def_options_with_default(further_options\\[]) do
+  defmacro def_options_with_default(further_options \\ []) do
     quote do
-      def_options [unquote_splicing(further_options),
+      def_options [
+        unquote_splicing(further_options),
         id: [
           type: :integer,
           spec: pos_integer,

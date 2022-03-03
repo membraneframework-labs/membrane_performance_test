@@ -44,9 +44,20 @@ defmodule Mix.Tasks.PerformanceTest do
       statistics = Keyword.get(options, :statistics) |> parse_statistics()
       reductions = Keyword.get(options, :reductions)
       [output_directory_path] = arguments
-      launch_test(%{mode: mode, n: n, how_many_tries: how_many_tries, tick: tick, inital_generator_frequency: inital_generator_frequency, should_adjust_generator_frequency: should_adjust_generator_frequency,
-      should_produce_plots: should_produce_plots, should_provide_statistics_header: should_provide_statistics_header, statistics: statistics, reductions: reductions, output_directory_path: output_directory_path})
 
+      launch_test(%{
+        mode: mode,
+        n: n,
+        how_many_tries: how_many_tries,
+        tick: tick,
+        inital_generator_frequency: inital_generator_frequency,
+        should_adjust_generator_frequency: should_adjust_generator_frequency,
+        should_produce_plots: should_produce_plots,
+        should_provide_statistics_header: should_provide_statistics_header,
+        statistics: statistics,
+        reductions: reductions,
+        output_directory_path: output_directory_path
+      })
     end
   end
 
@@ -66,7 +77,7 @@ defmodule Mix.Tasks.PerformanceTest do
           IO.puts("Unknown mode: #{value}")
           IO.puts(@syntax_error_message)
       end
-    IO.inspect(opts.output_directory_path)
+
     options = %{
       n: opts.n,
       source: nil,
@@ -101,13 +112,9 @@ defmodule Mix.Tasks.PerformanceTest do
       {:ok, pid} = Pipeline.start_link(options)
       Pipeline.play(pid)
 
-      frequency =
-        receive do
-          {:generator_frequency_found, generator_frequency} ->
-            generator_frequency
-        end
-
-      IO.puts(frequency)
+      receive do
+        {:result_statistics, result_statistics} -> result_statistics
+      end
     else
       options = %{
         options
@@ -120,7 +127,9 @@ defmodule Mix.Tasks.PerformanceTest do
 
       {:ok, pid} = Pipeline.start_link(options)
       Pipeline.play(pid)
-      Utils.wait_for_complete(pid)
+      receive do
+        {:result_statistics, result_statistics} -> result_statistics
+      end
     end
   end
 
