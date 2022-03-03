@@ -52,17 +52,26 @@ defmodule Base.Sink do
         ],
         plots_path: [
           type: :string,
-          description: "Path to the directory where the result plots should be stored"
+          description: "Path to the directory where the result plots should be stored",
+          default: nil
         ],
-        supervisor_pid: [type: :pid],
-        metrics: [type: :list]
+        supervisor_pid: [
+          type: :pid,
+          description:
+            "PID of the process who should be informed about the metrics gathered during the test. After the test is finished, that process
+        will receive {:result_metrics, metrics_list} message."
+        ],
+        chosen_metrics: [
+          type: :list,
+          description: "List of atoms corresponding to available metrics"
+        ]
       ]
     end
   end
 
   def handle_init(opts) do
-    metrics = opts.metrics |> Enum.filter(fn key -> key in @available_metrics end)
-    opts = %{opts | metrics: metrics}
+    chosen_metrics = opts.chosen_metrics |> Enum.filter(fn key -> key in @available_metrics end)
+    opts = %{opts | chosen_metrics: chosen_metrics}
 
     state = %{
       opts: opts,
@@ -165,7 +174,7 @@ defmodule Base.Sink do
           {:result_metrics, Enum.reverse(state.global_state.result_metrics)}
         )
 
-        [notify: :stop]
+        []
       else
         [notify: {:play, specification}]
       end
@@ -248,7 +257,8 @@ defmodule Base.Sink do
       )
     end
 
-    new_metrics = state.opts.metrics |> Enum.map(fn key -> {key, Map.get(state.metrics, key)} end)
+    new_metrics =
+      state.opts.chosen_metrics |> Enum.map(fn key -> {key, Map.get(state.metrics, key)} end)
 
     state = %{
       state

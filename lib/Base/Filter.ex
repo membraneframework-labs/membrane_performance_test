@@ -13,12 +13,14 @@ defmodule Base.Filter do
         id: [
           type: :integer,
           spec: pos_integer,
-          description: "Id of the element in the pipeline"
+          description: "Id of the element in the pipeline",
+          default: -1
         ],
         reductions: [
           type: :integer,
           spec: pos_integer,
-          description: "Number of reductions which should be done while processing each buffer"
+          description:
+            "Number of reductions which should be performed while processing each buffer"
         ]
       ]
     end

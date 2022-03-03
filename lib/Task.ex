@@ -4,16 +4,16 @@ defmodule Mix.Tasks.PerformanceTest do
   @denominator_of_probing_factor 100
   @syntax_error_message "Wrong syntax! Try: mix performance_test --mode <push|pull|autodemand> --n <number of elements>
    --howManyTries <how many tries> --tick <single try length [ms]> --initialGeneratorFrequency <frequency of the message generator in the first run>
-   --metrics <comma separated list of statistic names which should be saved> --reductions <number of reductions to be performed in each filter, while processing buffer>
+   --chosenMetrics <comma separated list of statistic names which should be saved> --reductions <number of reductions to be performed in each filter, while processing buffer>
    OPTIONAL: [--shouldAdjustGeneratorFrequency, --shouldProducePlots, --shouldProvidemetricsHeader]
    ARG: <output directory path>"
   @strict_keywords_list [
     mode: :string,
-    n: :integer,
+    numberOfElement: :integer,
     howManyTries: :integer,
     tick: :integer,
     initalGeneratorFrequency: :integer,
-    metrics: :string,
+    chosenMetrics: :string,
     reductions: :integer
   ]
   @optional_keywords_list [
@@ -35,34 +35,34 @@ defmodule Mix.Tasks.PerformanceTest do
       IO.puts(@syntax_error_message)
     else
       mode = Keyword.get(options, :mode)
-      n = Keyword.get(options, :n)
+      number_of_elements = Keyword.get(options, :numberOfElements)
       how_many_tries = Keyword.get(options, :howManyTries)
       tick = Keyword.get(options, :tick)
       inital_generator_frequency = Keyword.get(options, :initalGeneratorFrequency)
       should_adjust_generator_frequency = Keyword.get(options, :shouldAdjustGeneratorFrequency)
       should_produce_plots = Keyword.get(options, :shouldProducePlots)
       should_provide_metrics_header = Keyword.get(options, :shouldProvidemetricsHeader)
-      metrics = Keyword.get(options, :metrics) |> parse_metrics()
+      chosen_metrics = Keyword.get(options, :chosenMetrics) |> parse_metrics()
       reductions = Keyword.get(options, :reductions)
       [output_directory_path] = arguments
 
       result_metrics =
         launch_test(%{
           mode: mode,
-          n: n,
+          number_of_elements: number_of_elements,
           how_many_tries: how_many_tries,
           tick: tick,
           inital_generator_frequency: inital_generator_frequency,
           should_adjust_generator_frequency: should_adjust_generator_frequency,
           should_produce_plots: should_produce_plots,
-          metrics: metrics,
+          chosen_metrics: chosen_metrics,
           reductions: reductions,
           plots_path: Path.join(output_directory_path, @plots_directory)
         })
 
       Utils.save_metrics(
         result_metrics,
-        metrics,
+        chosen_metrics,
         Path.join(output_directory_path, @metrics_filename),
         should_provide_metrics_header
       )
@@ -87,9 +87,9 @@ defmodule Mix.Tasks.PerformanceTest do
       end
 
     options = %{
-      n: opts.n,
+      number_of_elements: opts.number_of_elements,
       source: nil,
-      filter: Module.concat(module, Filter).__struct__(id: -1, reductions: opts.reductions),
+      filter: Module.concat(module, Filter).__struct__(reductions: opts.reductions),
       sink:
         Module.concat(module, Sink).__struct__(
           tick: opts.tick,
@@ -97,48 +97,38 @@ defmodule Mix.Tasks.PerformanceTest do
           numerator_of_probing_factor: @numerator_of_probing_factor,
           denominator_of_probing_factor: @denominator_of_probing_factor,
           should_produce_plots?: opts.should_produce_plots,
-          plots_path: opts.plots_path,
+          plots_path: Map.get(opts, :plots_path),
           supervisor_pid: self(),
-          metrics: opts.metrics
+          chosen_metrics: opts.chosen_metrics
         )
     }
 
-    if opts.should_adjust_generator_frequency do
-      initial_lower_bound = 0
-      initial_upper_bound = opts.inital_generator_frequency * 2
+    {initial_lower_bound, initial_upper_bound} =
+      if opts.should_adjust_generator_frequency do
+        {0, opts.inital_generator_frequency * 2}
+      else
+        {opts.inital_generator_frequency, opts.inital_generator_frequency}
+      end
 
-      options = %{
-        options
-        | source:
-            Module.concat(module, Source).__struct__(
-              initial_lower_bound: initial_lower_bound,
-              initial_upper_bound: initial_upper_bound
-            )
-      }
+    options = %{
+      options
+      | source:
+          Module.concat(module, Source).__struct__(
+            initial_lower_bound: initial_lower_bound,
+            initial_upper_bound: initial_upper_bound
+          )
+    }
 
-      {:ok, pid} = Pipeline.start_link(options)
-      Pipeline.play(pid)
+    {:ok, pid} = Pipeline.start_link(options)
+    Pipeline.play(pid)
 
+    result_metrics =
       receive do
         {:result_metrics, result_metrics} -> result_metrics
       end
-    else
-      options = %{
-        options
-        | source:
-            Module.concat(module, Source).__struct__(
-              initial_lower_bound: opts.inital_generator_frequency,
-              initial_upper_bound: opts.inital_generator_frequency
-            )
-      }
 
-      {:ok, pid} = Pipeline.start_link(options)
-      Pipeline.play(pid)
-
-      receive do
-        {:result_metrics, result_metrics} -> result_metrics
-      end
-    end
+    Pipeline.stop_and_terminate(pid, blocking?: true)
+    result_metrics
   end
 
   defp parse_metrics(metrics_string) do
