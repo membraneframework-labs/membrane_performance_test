@@ -25,12 +25,12 @@ defmodule Utils do
     output
   end
 
-  def save_statistics(statistics, statistics_names, path, should_provide_statistics_header) do
-    if should_provide_statistics_header do
-      provide_results_file_header(statistics_names, path)
+  def save_metrics(metrics, metrics_names, path, should_provide_metrics_header) do
+    if should_provide_metrics_header do
+      provide_results_file_header(metrics_names, path)
     end
 
-    content  = statistics |> Enum.map(fn one_try_statistics -> one_try_statistics |> Enum.map(fn {_key, value}->value end)  |> Enum.join(",") end) |> Enum.join("\n")
+    content  = metrics |> Enum.map(fn one_try_metrics -> one_try_metrics |> Enum.map(fn {_key, value}->value end)  |> Enum.join(",") end) |> Enum.join("\n")
 
     File.write(
       path,
@@ -39,8 +39,8 @@ defmodule Utils do
     )
   end
 
-  defp provide_results_file_header(statistics_names, path) do
-    content = (statistics_names |> Enum.join(",")) <> "\n"
+  defp provide_results_file_header(metrics_names, path) do
+    content = (metrics_names |> Enum.join(",")) <> "\n"
 
     File.write(
       path,

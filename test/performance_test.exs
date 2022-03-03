@@ -11,13 +11,13 @@ defmodule Test.PerformanceTest do
       inital_generator_frequency: 5_000,
       should_adjust_generator_frequency: true,
       should_produce_plots: false,
-      statistics: [:generator_frequency],
+      metrics: [:generator_frequency],
       reductions: 1_000,
       plots_path: "/project/results/plots"
     }
 
     [generator_frequency: frequency] = List.last(Mix.Tasks.PerformanceTest.launch_test(opts))
-    opts = %{opts| inital_generator_frequency: frequency, should_adjust_generator_frequency: false, statistics: [:throughput], how_many_tries: 0}
+    opts = %{opts| inital_generator_frequency: frequency, should_adjust_generator_frequency: false, metrics: [:throughput], how_many_tries: 0}
     IO.inspect(Mix.Tasks.PerformanceTest.launch_test(opts))
 
   end

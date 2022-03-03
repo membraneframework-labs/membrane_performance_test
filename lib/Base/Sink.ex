@@ -1,7 +1,7 @@
 defmodule Base.Sink do
   alias Membrane.Buffer
 
-  @available_statistics [
+  @available_metrics [
     :throughput,
     :generator_frequency,
     :passing_time_avg,
@@ -55,19 +55,19 @@ defmodule Base.Sink do
           description: "Path to the directory where the result plots should be stored"
         ],
         supervisor_pid: [type: :pid],
-        statistics: [type: :list]
+        metrics: [type: :list]
       ]
     end
   end
 
   def handle_init(opts) do
-    statistics = opts.statistics |> Enum.filter(fn key -> key in @available_statistics end)
-    #opts = %{opts| statistics: statistics}
+    metrics = opts.metrics |> Enum.filter(fn key -> key in @available_metrics end)
+    #opts = %{opts| metrics: metrics}
     state = %{
-      opts: opts,
-      metrics: nil,
-      single_try_state: nil,
-      global_state: nil,
+      #opts: opts,
+      #metrics: nil,
+      #single_try_state: nil,
+      #global_state: nil,
 
 
       message_count: 0,#SINGLE_STATE
@@ -85,11 +85,11 @@ defmodule Base.Sink do
       should_produce_plots?: opts.should_produce_plots?,#OPTS
       plots_path: opts.plots_path,#OPTS
       supervisor_pid: opts.supervisor_pid,#OPTS
-      statistics: statistics,#OPTS
+      metrics: metrics,#OPTS
       passing_time_avg: 0,#METRICS
       passing_time_std: 0,#METRICS
       generator_frequency: 0,#METRICS
-      result_statistics: []#GLOBAL_STATE
+      result_metrics: []#GLOBAL_STATE
     }
 
     {:ok, state}
@@ -141,7 +141,7 @@ defmodule Base.Sink do
         generator_frequency: generator_frequency
     }
 
-    state = write_demanded_statistics(state)
+    state = write_demanded_metrics(state)
 
     specification =
       check_normality(
@@ -155,7 +155,7 @@ defmodule Base.Sink do
 
     actions =
       if state.tries_counter == state.how_many_tries do
-        send(state.supervisor_pid, {:result_statistics, Enum.reverse(state.result_statistics)})
+        send(state.supervisor_pid, {:result_metrics, Enum.reverse(state.result_metrics)})
         [notify: :stop]
       else
         [notify: {:play, specification}]
@@ -209,7 +209,7 @@ defmodule Base.Sink do
     end
   end
 
-  defp write_demanded_statistics(state) do
+  defp write_demanded_metrics(state) do
     if state.should_produce_plots? do
       output = Utils.prepare_plot(state.times, state.passing_time_avg, state.passing_time_std)
 
@@ -221,8 +221,8 @@ defmodule Base.Sink do
         output
       )
     end
-    new_statistics = state.statistics |> Enum.map(fn key -> {key, Map.get(state, key)} end )
-    state = %{state| result_statistics: [new_statistics| state.result_statistics]}
+    new_metrics = state.metrics |> Enum.map(fn key -> {key, Map.get(state, key)} end )
+    state = %{state| result_metrics: [new_metrics| state.result_metrics]}
     state
   end
 

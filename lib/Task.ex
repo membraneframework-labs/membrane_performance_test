@@ -4,8 +4,8 @@ defmodule Mix.Tasks.PerformanceTest do
   @denominator_of_probing_factor 100
   @syntax_error_message "Wrong syntax! Try: mix performance_test --mode <push|pull|autodemand> --n <number of elements>
    --howManyTries <how many tries> --tick <single try length [ms]> --initialGeneratorFrequency <frequency of the message generator in the first run>
-   --statistics <comma separated list of statistic names which should be saved> --reductions <number of reductions to be performed in each filter, while processing buffer>
-   OPTIONAL: [--shouldAdjustGeneratorFrequency, --shouldProducePlots, --shouldProvideStatisticsHeader]
+   --metrics <comma separated list of statistic names which should be saved> --reductions <number of reductions to be performed in each filter, while processing buffer>
+   OPTIONAL: [--shouldAdjustGeneratorFrequency, --shouldProducePlots, --shouldProvidemetricsHeader]
    ARG: <output directory path>"
   @strict_keywords_list [
     mode: :string,
@@ -13,15 +13,15 @@ defmodule Mix.Tasks.PerformanceTest do
     howManyTries: :integer,
     tick: :integer,
     initalGeneratorFrequency: :integer,
-    statistics: :string,
+    metrics: :string,
     reductions: :integer
   ]
   @optional_keywords_list [
     shouldAdjustGeneratorFrequency: :boolean,
     shouldProducePlots: :boolean,
-    shouldProvideStatisticsHeader: :boolean
+    shouldProvidemetricsHeader: :boolean
   ]
-  @statistics_filename "stats.csv"
+  @metrics_filename "stats.csv"
   @plots_directory "plots"
   def run(args) do
     {options, arguments, errors} =
@@ -41,12 +41,12 @@ defmodule Mix.Tasks.PerformanceTest do
       inital_generator_frequency = Keyword.get(options, :initalGeneratorFrequency)
       should_adjust_generator_frequency = Keyword.get(options, :shouldAdjustGeneratorFrequency)
       should_produce_plots = Keyword.get(options, :shouldProducePlots)
-      should_provide_statistics_header = Keyword.get(options, :shouldProvideStatisticsHeader)
-      statistics = Keyword.get(options, :statistics) |> parse_statistics()
+      should_provide_metrics_header = Keyword.get(options, :shouldProvidemetricsHeader)
+      metrics = Keyword.get(options, :metrics) |> parse_metrics()
       reductions = Keyword.get(options, :reductions)
       [output_directory_path] = arguments
 
-      result_statistics = launch_test(%{
+      result_metrics = launch_test(%{
         mode: mode,
         n: n,
         how_many_tries: how_many_tries,
@@ -54,12 +54,12 @@ defmodule Mix.Tasks.PerformanceTest do
         inital_generator_frequency: inital_generator_frequency,
         should_adjust_generator_frequency: should_adjust_generator_frequency,
         should_produce_plots: should_produce_plots,
-        statistics: statistics,
+        metrics: metrics,
         reductions: reductions,
         plots_path: Path.join(output_directory_path, @plots_directory)
       })
 
-      Utils.save_statistics(result_statistics, statistics, Path.join(output_directory_path, @statistics_filename), should_provide_statistics_header)
+      Utils.save_metrics(result_metrics, metrics, Path.join(output_directory_path, @metrics_filename), should_provide_metrics_header)
     end
   end
 
@@ -90,7 +90,7 @@ defmodule Mix.Tasks.PerformanceTest do
           should_produce_plots?: opts.should_produce_plots,
           plots_path: opts.plots_path,
           supervisor_pid: self(),
-          statistics: opts.statistics
+          metrics: opts.metrics
         )
     }
 
@@ -110,7 +110,7 @@ defmodule Mix.Tasks.PerformanceTest do
       Pipeline.play(pid)
 
       receive do
-        {:result_statistics, result_statistics} -> result_statistics
+        {:result_metrics, result_metrics} -> result_metrics
       end
     else
       options = %{
@@ -124,13 +124,13 @@ defmodule Mix.Tasks.PerformanceTest do
       {:ok, pid} = Pipeline.start_link(options)
       Pipeline.play(pid)
       receive do
-        {:result_statistics, result_statistics} -> result_statistics
+        {:result_metrics, result_metrics} -> result_metrics
       end
     end
   end
 
-  defp parse_statistics(statistics_string) do
-    for statistic_name <- statistics_string |> String.split(",") do
+  defp parse_metrics(metrics_string) do
+    for statistic_name <- metrics_string |> String.split(",") do
       String.to_atom(statistic_name)
     end
   end
