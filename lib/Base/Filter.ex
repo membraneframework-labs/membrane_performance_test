@@ -1,6 +1,4 @@
 defmodule Base.Filter do
-
-
   defmacro __using__(_opts) do
     quote do
       use Membrane.Filter
@@ -8,19 +6,21 @@ defmodule Base.Filter do
     end
   end
 
-
-  defmacro def_options_with_default(further_options\\[]) do
+  defmacro def_options_with_default(further_options \\ []) do
     quote do
-      def_options [unquote_splicing(further_options),
+      def_options [
+        unquote_splicing(further_options),
         id: [
           type: :integer,
           spec: pos_integer,
-          description: "Id of the element in the pipeline"
+          description: "Id of the element in the pipeline",
+          default: -1
         ],
         reductions: [
           type: :integer,
           spec: pos_integer,
-          description: "Number of reductions which should be done while processing each buffer"
+          description:
+            "Number of reductions which should be performed while processing each buffer"
         ]
       ]
     end
