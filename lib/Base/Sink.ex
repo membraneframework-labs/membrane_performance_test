@@ -171,7 +171,7 @@ defmodule Base.Sink do
       if state.global_state.tries_counter == state.opts.how_many_tries do
         send(
           state.opts.supervisor_pid,
-          {:result_metrics, Enum.reverse(state.global_state.result_metrics)}
+          :finished
         )
 
         []
@@ -240,33 +240,38 @@ defmodule Base.Sink do
   end
 
   defp write_demanded_metrics(state) do
-    if state.opts.should_produce_plots? do
-      output =
-        Utils.prepare_plot(
-          state.single_try_state.times,
-          state.metrics.passing_time_avg,
-          state.metrics.passing_time_std
-        )
+    # if state.opts.should_produce_plots? do
+    #   output =
+    #     Utils.prepare_plot(
+    #       state.single_try_state.times,
+    #       state.metrics.passing_time_avg,
+    #       state.metrics.passing_time_std
+    #     )
 
-      File.write!(
-        Path.join(
-          state.opts.plots_path,
-          Integer.to_string(state.global_state.tries_counter) <> "_" <> @plot_filename
-        ),
-        output
-      )
-    end
+    #   File.write!(
+    #     Path.join(
+    #       state.opts.plots_path,
+    #       Integer.to_string(state.global_state.tries_counter) <> "_" <> @plot_filename
+    #     ),
+    #     output
+    #   )
+    # end
 
     new_metrics =
       state.opts.chosen_metrics |> Enum.map(fn key -> {key, Map.get(state.metrics, key)} end)
 
-    state = %{
-      state
-      | global_state: %{
-          state.global_state
-          | result_metrics: [new_metrics | state.global_state.result_metrics]
-        }
-    }
+    send(
+          state.opts.supervisor_pid,
+          {:new_metrics, new_metrics}
+        )
+
+    # state = %{
+    #   state
+    #   | global_state: %{
+    #       state.global_state
+    #       | result_metrics: [new_metrics | state.global_state.result_metrics]
+    #     }
+    # }
 
     state
   end

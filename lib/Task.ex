@@ -9,7 +9,7 @@ defmodule Mix.Tasks.PerformanceTest do
    ARG: <output directory path>"
   @strict_keywords_list [
     mode: :string,
-    numberOfElement: :integer,
+    numberOfElements: :integer,
     howManyTries: :integer,
     tick: :integer,
     initalGeneratorFrequency: :integer,
@@ -19,7 +19,7 @@ defmodule Mix.Tasks.PerformanceTest do
   @optional_keywords_list [
     shouldAdjustGeneratorFrequency: :boolean,
     shouldProducePlots: :boolean,
-    shouldProvidemetricsHeader: :boolean
+    shouldProvideMetricsHeader: :boolean
   ]
   @metrics_filename "stats.csv"
   @plots_directory "plots"
@@ -41,7 +41,7 @@ defmodule Mix.Tasks.PerformanceTest do
       inital_generator_frequency = Keyword.get(options, :initalGeneratorFrequency)
       should_adjust_generator_frequency = Keyword.get(options, :shouldAdjustGeneratorFrequency)
       should_produce_plots = Keyword.get(options, :shouldProducePlots)
-      should_provide_metrics_header = Keyword.get(options, :shouldProvidemetricsHeader)
+      should_provide_metrics_header = Keyword.get(options, :shouldProvideMetricsHeader)
       chosen_metrics = Keyword.get(options, :chosenMetrics) |> parse_metrics()
       reductions = Keyword.get(options, :reductions)
       [output_directory_path] = arguments
@@ -122,10 +122,7 @@ defmodule Mix.Tasks.PerformanceTest do
     {:ok, pid} = Pipeline.start_link(options)
     Pipeline.play(pid)
 
-    result_metrics =
-      receive do
-        {:result_metrics, result_metrics} -> result_metrics
-      end
+    result_metrics = gather_metrics()
 
     Pipeline.stop_and_terminate(pid, blocking?: true)
     result_metrics
@@ -134,6 +131,13 @@ defmodule Mix.Tasks.PerformanceTest do
   defp parse_metrics(metrics_string) do
     for statistic_name <- metrics_string |> String.split(",") do
       String.to_atom(statistic_name)
+    end
+  end
+
+  defp gather_metrics() do
+    receive do
+      {:new_metrics, new_metrics} -> [new_metrics| gather_metrics()]
+      :finished -> []
     end
   end
 end
