@@ -16,7 +16,7 @@ defmodule Test.PerformanceTest do
     opts = %{
       mode: mode,
       number_of_elements: 10,
-      how_many_tries: 10,
+      how_many_tries: 3,
       tick: 10_000,
       inital_generator_frequency: 50_000,
       should_adjust_generator_frequency: true,
@@ -25,7 +25,9 @@ defmodule Test.PerformanceTest do
       reductions: 0
     }
 
-    [generator_frequency: frequency] = List.last(Mix.Tasks.PerformanceTest.launch_test(opts))
+    result = List.last(Utils.launch_test(opts))
+
+    %{[:metrics, :generator_frequency] => frequency} = result
 
     opts = %{
       opts
@@ -35,12 +37,25 @@ defmodule Test.PerformanceTest do
         how_many_tries: how_many_tries
     }
 
-    result = Mix.Tasks.PerformanceTest.launch_test(opts)
+    result = Utils.launch_test(opts)
 
     average_throughput =
-      (result |> Enum.map(fn metrics_list -> metrics_list[:throughput] end) |> Enum.sum()) /
+      (result
+       |> Enum.map(fn metrics_list -> metrics_list[[:metrics, :throughput]] end)
+       |> Enum.sum()) /
         length(result)
 
     average_throughput
+  end
+
+  defp unpack_metrics(metrics) do
+    metrics
+    |> Enum.map(fn map ->
+      Enum.filter(map, fn
+        {[:metrics, _key], _value} -> true
+        _ -> false
+      end)
+      |> Enum.map(fn {[:metrics, key], value} -> {key, value} end)
+    end)
   end
 end

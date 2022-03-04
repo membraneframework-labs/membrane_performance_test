@@ -1,16 +1,6 @@
 defmodule Base.Sink do
   alias Membrane.Buffer
 
-  @available_metrics [
-    :throughput,
-    :generator_frequency,
-    :passing_time_avg,
-    :passing_time_std
-    # :tick,
-    # :tries_counter
-  ]
-  @plot_filename "plot.svg"
-
   defmacro __using__(_opts) do
     quote do
       use Membrane.Sink
@@ -70,8 +60,8 @@ defmodule Base.Sink do
   end
 
   def handle_init(opts) do
-    chosen_metrics = opts.chosen_metrics |> Enum.filter(fn key -> key in @available_metrics end)
-    opts = %{opts | chosen_metrics: chosen_metrics}
+    # chosen_metrics = opts.chosen_metrics |> Enum.filter(fn key -> key in @available_metrics end)
+    # opts = %{opts | chosen_metrics: chosen_metrics}
 
     state = %{
       opts: opts,
@@ -155,7 +145,7 @@ defmodule Base.Sink do
         }
     }
 
-    state = write_demanded_metrics(state)
+    write_demanded_metrics(state)
 
     specification =
       check_normality(
@@ -240,39 +230,14 @@ defmodule Base.Sink do
   end
 
   defp write_demanded_metrics(state) do
-    # if state.opts.should_produce_plots? do
-    #   output =
-    #     Utils.prepare_plot(
-    #       state.single_try_state.times,
-    #       state.metrics.passing_time_avg,
-    #       state.metrics.passing_time_std
-    #     )
-
-    #   File.write!(
-    #     Path.join(
-    #       state.opts.plots_path,
-    #       Integer.to_string(state.global_state.tries_counter) <> "_" <> @plot_filename
-    #     ),
-    #     output
-    #   )
-    # end
-
     new_metrics =
-      state.opts.chosen_metrics |> Enum.map(fn key -> {key, Map.get(state.metrics, key)} end)
+      state.opts.chosen_metrics
+      |> Enum.map(fn key -> {key, Utils.access_nested_map(state, key)} end)
+      |> Map.new()
 
     send(
-          state.opts.supervisor_pid,
-          {:new_metrics, new_metrics}
-        )
-
-    # state = %{
-    #   state
-    #   | global_state: %{
-    #       state.global_state
-    #       | result_metrics: [new_metrics | state.global_state.result_metrics]
-    #     }
-    # }
-
-    state
+      state.opts.supervisor_pid,
+      {:new_metrics, new_metrics}
+    )
   end
 end
