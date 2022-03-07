@@ -13,9 +13,9 @@ defmodule Test.PerformanceTest do
   end
 
   defp get_average_throughput(mode, how_many_tries) do
-    opts = %{
+    opts = %Utils.TestOptions{
       mode: mode,
-      number_of_elements: 10,
+      number_of_elements: 1,
       how_many_tries: 3,
       tick: 10_000,
       inital_generator_frequency: 50_000,
@@ -29,7 +29,7 @@ defmodule Test.PerformanceTest do
 
     %{[:metrics, :generator_frequency] => frequency} = result
 
-    opts = %{
+    opts = %Utils.TestOptions{
       opts
       | inital_generator_frequency: frequency,
         should_adjust_generator_frequency: false,
@@ -48,14 +48,4 @@ defmodule Test.PerformanceTest do
     average_throughput
   end
 
-  defp unpack_metrics(metrics) do
-    metrics
-    |> Enum.map(fn map ->
-      Enum.filter(map, fn
-        {[:metrics, _key], _value} -> true
-        _ -> false
-      end)
-      |> Enum.map(fn {[:metrics, key], value} -> {key, value} end)
-    end)
-  end
 end

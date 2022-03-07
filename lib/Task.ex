@@ -54,7 +54,7 @@ defmodule Mix.Tasks.PerformanceTest do
       [output_directory_path] = arguments
 
       result_metrics =
-        Utils.launch_test(%{
+        Utils.launch_test(%Utils.TestOptions{
           mode: mode,
           number_of_elements: number_of_elements,
           how_many_tries: how_many_tries,
@@ -64,7 +64,6 @@ defmodule Mix.Tasks.PerformanceTest do
           should_produce_plots: should_produce_plots,
           chosen_metrics: chosen_metrics,
           reductions: reductions,
-          plots_path: Path.join(output_directory_path, @plots_directory)
         })
 
       Utils.save_metrics(

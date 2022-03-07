@@ -40,11 +40,6 @@ defmodule Base.Sink do
           description:
             "True, if the result.svg containing the plot of the passing times for the messages should be printed, false otherwise"
         ],
-        plots_path: [
-          type: :string,
-          description: "Path to the directory where the result plots should be stored",
-          default: nil
-        ],
         supervisor_pid: [
           type: :pid,
           description:
@@ -60,9 +55,6 @@ defmodule Base.Sink do
   end
 
   def handle_init(opts) do
-    # chosen_metrics = opts.chosen_metrics |> Enum.filter(fn key -> key in @available_metrics end)
-    # opts = %{opts | chosen_metrics: chosen_metrics}
-
     state = %{
       opts: opts,
       metrics: %{throughput: 0, passing_time_avg: 0, passing_time_std: 0, generator_frequency: 0},

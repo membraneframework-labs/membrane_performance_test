@@ -1,7 +1,35 @@
 defmodule Utils do
+  @moduledoc """
+  A module gathering function which provide functionalities used in different other modules.
+  """
   @numerator_of_probing_factor 1
   @denominator_of_probing_factor 100
 
+
+  @type single_run_metrics :: %{list(any()) => any()}
+
+  defmodule TestOptions do
+    @enforce_keys [:mode, :number_of_elements, :how_many_tries, :tick, :inital_generator_frequency, :should_adjust_generator_frequency, :should_produce_plots, :chosen_metrics, :reductions]
+    defstruct @enforce_keys
+
+    @type t :: %__MODULE__{
+      mode: String.t(),
+      number_of_elements: integer(),
+      how_many_tries: integer(),
+      tick: integer(),
+      inital_generator_frequency: integer(),
+      should_adjust_generator_frequency: integer(),
+      should_produce_plots: boolean(),
+      chosen_metrics: list(atom()),
+      reductions: integer()
+    }
+  end
+
+
+  @doc """
+  Starts monitoring the process with given `pid` and waits until it terminates and sends `:DOWN` message
+  """
+  @spec wait_for_complete(pid()) :: nil
   def wait_for_complete(pid) do
     ref = Process.monitor(pid)
 
@@ -10,6 +38,15 @@ defmodule Utils do
     end
   end
 
+
+  @doc """
+  Creates an .svg representation of a HowLongWasAMessagePassingThroughThePipeline(time_when_message_was_sent) plot with the use of ContEx library, based on the probe of points, the average time spent by a message in the pipeline, and the standard deviation of that value.
+  Args:
+    times - list of {x, y} tuples, where x is a time the message was sent and y is duration of the time period which elapsed between the message generation and that message arrival on the sink
+    avg - average time messages spent in the pipeline
+    std - standard deviation of the time messages spent in the pipeline
+  """
+  @spec prepare_plot(list({integer(), integer()}), float(), float()) :: any()
   def prepare_plot(times, avg, std) do
     times = times |> Enum.map(fn {x, y} -> {x / 1000_000, y / 1000_000} end)
     ds = Contex.Dataset.new(times, ["x", "y"])
@@ -28,6 +65,16 @@ defmodule Utils do
     output
   end
 
+
+  @doc """
+  Saves the test results in the filesystem, as a .csv file.
+  Args:
+    metrics - list of metrics gathered during a single test run, a value returned by `Utils.launch_test/1`,
+    metric_names - list of atoms describing the names of the metrics which should be saved in the filesystem,
+    path - path to the file where the result metrics should be stored,
+    should_provide_metrics_headers - `true` if the first line in the result file should contain the names of metrics, `false` otherwise.
+  """
+  @spec save_metrics(list(single_run_metrics()), list(atom()), String.t(), boolean()) :: :ok | {:error, any()}
   def save_metrics(metrics, metrics_names, path, should_provide_metrics_header) do
     if should_provide_metrics_header do
       provide_results_file_header(metrics_names, path)
@@ -53,6 +100,16 @@ defmodule Utils do
     )
   end
 
+
+  @doc """
+  Gets the value from the inner dictionaries of a nested dictionary.
+  A nested dictionary is a dictionary whose values are some other (potentially also nested) dictionaries.
+  Args:
+    map - a nested dictionary,
+    list_of_keys - list of keys which point to the desired value of some inner dictionary
+  Returns: a value in the `map`, pointed by the `list_of_keys`.
+  """
+  @spec access_nested_map(map(), list(any)) :: any()
   def access_nested_map(map, list_of_keys) when length(list_of_keys) == 1 and is_map(map) do
     [key] = list_of_keys
     Map.get(map, key)
@@ -65,6 +122,22 @@ defmodule Utils do
 
   def access_nested_map(_map, _list_of_keys), do: nil
 
+
+  @doc """
+  Launches a test parametrized with the Utils.TestOptions structure and returns the metrics gathered during that test.
+  Args:
+    opts - TestOptions structure describing the parameters of the test.
+  Returns: a list of maps, where each map describes the metrics gathered during a single try of the test. The keys in each of these maps are lists of keys pointing to the desired information
+  in the internal state of Sink, and the value is the desired information. Exemplary maps describing the metrics gather during a single run:
+  ```
+    %{
+      [:metrics, :generator_frequency] => 4375,
+      [:metrics, :passing_time_avg] => 3112845.262290126,
+      [:metrics, :passing_time_std] => 625614.153995784,
+    }
+  ```
+  """
+  @spec launch_test(TestOptions.t()) :: list(single_run_metrics)
   def launch_test(opts) do
     module =
       case opts.mode do
@@ -98,7 +171,6 @@ defmodule Utils do
           numerator_of_probing_factor: @numerator_of_probing_factor,
           denominator_of_probing_factor: @denominator_of_probing_factor,
           should_produce_plots?: opts.should_produce_plots,
-          plots_path: Map.get(opts, :plots_path),
           supervisor_pid: self(),
           chosen_metrics: chosen_metrics
         )
@@ -125,7 +197,6 @@ defmodule Utils do
 
     result_metrics = gather_metrics()
     Pipeline.stop_and_terminate(pid, blocking?: true)
-
     result_metrics
   end
 
