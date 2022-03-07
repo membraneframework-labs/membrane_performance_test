@@ -43,7 +43,7 @@ defmodule Base.Sink do
         supervisor_pid: [
           type: :pid,
           description:
-            "PID of the process who should be informed about the metrics gathered during the test. After the test is finished, that process
+            "PID of the process which should be informed about the metrics gathered during the test. After the test is finished, that process
         will receive {:result_metrics, metrics_list} message."
         ],
         chosen_metrics: [

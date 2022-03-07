@@ -15,14 +15,14 @@ defmodule Test.PerformanceTest do
   defp get_average_throughput(mode, how_many_tries) do
     opts = %Utils.TestOptions{
       mode: mode,
-      number_of_elements: 1,
+      number_of_elements: 10,
       how_many_tries: 3,
       tick: 10_000,
       inital_generator_frequency: 50_000,
-      should_adjust_generator_frequency: true,
-      should_produce_plots: false,
+      should_adjust_generator_frequency?: true,
+      should_produce_plots?: false,
       chosen_metrics: [:generator_frequency],
-      reductions: 0
+      reductions: 1_000
     }
 
     result = List.last(Utils.launch_test(opts))
@@ -32,7 +32,7 @@ defmodule Test.PerformanceTest do
     opts = %Utils.TestOptions{
       opts
       | inital_generator_frequency: frequency,
-        should_adjust_generator_frequency: false,
+        should_adjust_generator_frequency?: false,
         chosen_metrics: [:throughput],
         how_many_tries: how_many_tries
     }

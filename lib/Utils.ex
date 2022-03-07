@@ -9,7 +9,7 @@ defmodule Utils do
   @type single_run_metrics :: %{list(any()) => any()}
 
   defmodule TestOptions do
-    @enforce_keys [:mode, :number_of_elements, :how_many_tries, :tick, :inital_generator_frequency, :should_adjust_generator_frequency, :should_produce_plots, :chosen_metrics, :reductions]
+    @enforce_keys [:mode, :number_of_elements, :how_many_tries, :tick, :inital_generator_frequency, :should_adjust_generator_frequency?, :should_produce_plots?, :chosen_metrics, :reductions]
     defstruct @enforce_keys
 
     @type t :: %__MODULE__{
@@ -18,8 +18,8 @@ defmodule Utils do
       how_many_tries: integer(),
       tick: integer(),
       inital_generator_frequency: integer(),
-      should_adjust_generator_frequency: integer(),
-      should_produce_plots: boolean(),
+      should_adjust_generator_frequency?: integer(),
+      should_produce_plots?: boolean(),
       chosen_metrics: list(atom()),
       reductions: integer()
     }
@@ -72,11 +72,11 @@ defmodule Utils do
     metrics - list of metrics gathered during a single test run, a value returned by `Utils.launch_test/1`,
     metric_names - list of atoms describing the names of the metrics which should be saved in the filesystem,
     path - path to the file where the result metrics should be stored,
-    should_provide_metrics_headers - `true` if the first line in the result file should contain the names of metrics, `false` otherwise.
+    should_provide_metrics_header? - `true` if the first line in the result file should contain the names of metrics, `false` otherwise.
   """
   @spec save_metrics(list(single_run_metrics()), list(atom()), String.t(), boolean()) :: :ok | {:error, any()}
-  def save_metrics(metrics, metrics_names, path, should_provide_metrics_header) do
-    if should_provide_metrics_header do
+  def save_metrics(metrics, metrics_names, path, should_provide_metrics_header?) do
+    if should_provide_metrics_header? do
       provide_results_file_header(metrics_names, path)
     end
 
@@ -157,7 +157,7 @@ defmodule Utils do
     chosen_metrics =
       prepare_information_to_be_fetched_from_sink_state(
         opts.chosen_metrics,
-        opts.should_produce_plots
+        opts.should_produce_plots?
       )
 
     options = %{
@@ -170,14 +170,14 @@ defmodule Utils do
           how_many_tries: opts.how_many_tries,
           numerator_of_probing_factor: @numerator_of_probing_factor,
           denominator_of_probing_factor: @denominator_of_probing_factor,
-          should_produce_plots?: opts.should_produce_plots,
+          should_produce_plots?: opts.should_produce_plots?,
           supervisor_pid: self(),
           chosen_metrics: chosen_metrics
         )
     }
 
     {initial_lower_bound, initial_upper_bound} =
-      if opts.should_adjust_generator_frequency do
+      if opts.should_adjust_generator_frequency? do
         {0, opts.inital_generator_frequency * 2}
       else
         {opts.inital_generator_frequency, opts.inital_generator_frequency}

@@ -46,9 +46,9 @@ defmodule Mix.Tasks.PerformanceTest do
       how_many_tries = Keyword.get(options, :howManyTries)
       tick = Keyword.get(options, :tick)
       inital_generator_frequency = Keyword.get(options, :initalGeneratorFrequency)
-      should_adjust_generator_frequency = Keyword.get(options, :shouldAdjustGeneratorFrequency)
-      should_produce_plots = Keyword.get(options, :shouldProducePlots)
-      should_provide_metrics_header = Keyword.get(options, :shouldProvideMetricsHeader)
+      should_adjust_generator_frequency? = Keyword.get(options, :shouldAdjustGeneratorFrequency)
+      should_produce_plots? = Keyword.get(options, :shouldProducePlots)
+      should_provide_metrics_header? = Keyword.get(options, :shouldProvideMetricsHeader)
       chosen_metrics = Keyword.get(options, :chosenMetrics) |> change_metric_strings_into_atoms()
       reductions = Keyword.get(options, :reductions)
       [output_directory_path] = arguments
@@ -60,8 +60,8 @@ defmodule Mix.Tasks.PerformanceTest do
           how_many_tries: how_many_tries,
           tick: tick,
           inital_generator_frequency: inital_generator_frequency,
-          should_adjust_generator_frequency: should_adjust_generator_frequency,
-          should_produce_plots: should_produce_plots,
+          should_adjust_generator_frequency?: should_adjust_generator_frequency?,
+          should_produce_plots?: should_produce_plots?,
           chosen_metrics: chosen_metrics,
           reductions: reductions,
         })
@@ -70,10 +70,10 @@ defmodule Mix.Tasks.PerformanceTest do
         result_metrics,
         chosen_metrics,
         Path.join(output_directory_path, @metrics_filename),
-        should_provide_metrics_header
+        should_provide_metrics_header?
       )
 
-      if should_produce_plots do
+      if should_produce_plots? do
         result_metrics
         |> Enum.with_index()
         |> Enum.each(fn {single_try_list_of_metrics, i} ->
@@ -98,8 +98,8 @@ defmodule Mix.Tasks.PerformanceTest do
 
   defp change_metric_strings_into_atoms(metrics_string) do
     chosen_metrics =
-      for statistic_name <- metrics_string |> String.split(",") do
-        String.to_atom(statistic_name)
+      for metric_name <- metrics_string |> String.split(",") do
+        String.to_existing_atom(metric_name)
       end
 
     chosen_metrics |> Enum.filter(fn key -> key in @available_metrics end)
