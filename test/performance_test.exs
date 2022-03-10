@@ -4,19 +4,20 @@ defmodule Test.PerformanceTest do
   @tag timeout: :infinity
   test "if membrane core is fast enough" do
     average_push_throughput = get_average_throughput("push", 0)
-    average_pull_throughput = get_average_throughput("pull", 0)
-    average_autodemand_throughput = get_average_throughput("autodemand", 0)
+    #average_pull_throughput = get_average_throughput("pull", 0)
+    #average_autodemand_throughput = get_average_throughput("autodemand", 0)
 
-    IO.puts(
-      "PUSH: #{average_push_throughput} PULL: #{average_pull_throughput} AUTODEMAND: #{average_autodemand_throughput}"
-    )
+    #IO.puts(
+    #  "PUSH: #{average_push_throughput} PULL: #{average_pull_throughput} AUTODEMAND: #{average_autodemand_throughput}"
+    #)
+    IO.puts("PUSH: #{average_push_throughput}")
   end
 
   defp get_average_throughput(mode, how_many_tries) do
     opts = %Utils.TestOptions{
       mode: mode,
       number_of_elements: 10,
-      how_many_tries: 3,
+      how_many_tries: 8,
       tick: 10_000,
       inital_generator_frequency: 50_000,
       should_adjust_generator_frequency?: true,

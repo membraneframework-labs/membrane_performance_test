@@ -16,7 +16,7 @@ defmodule Base.Sink do
           type: :integer,
           spec: pos_integer,
           description:
-            "Positive integer, describing number of ticks after which the message to count evaluate the throughput should be send"
+            "Positive integer, describing number of ticks after which the message to calculate the throughput should be send"
         ],
         how_many_tries: [
           type: :integer,
@@ -38,7 +38,7 @@ defmodule Base.Sink do
         should_produce_plots?: [
           type: :boolean,
           description:
-            "True, if the result.svg containing the plot of the passing times for the messages should be printed, false otherwise"
+            "True, if the .svg files containing the plots of the passing times for the messages should be printed, false otherwise"
         ],
         supervisor_pid: [
           type: :pid,
@@ -210,9 +210,11 @@ defmodule Base.Sink do
       try_no == 0 ->
         :the_same
 
+      # average passing time of a message is greater than 20ms which is unacceptable, therfore we neee to slow down the message generation
       passing_time_avg > 20_000_000 ->
         :slower
 
+      # average passing time of a message is less than 20ms, but the standard deviation is relatively too high
       passing_time_std > 10_000_000 and passing_time_std > 0.5 * passing_time_avg ->
         :slower
 

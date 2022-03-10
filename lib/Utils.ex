@@ -42,9 +42,10 @@ defmodule Utils do
   @doc """
   Creates an .svg representation of a HowLongWasAMessagePassingThroughThePipeline(time_when_message_was_sent) plot with the use of ContEx library, based on the probe of points, the average time spent by a message in the pipeline, and the standard deviation of that value.
   Args:
-    times - list of {x, y} tuples, where x is a time the message was sent and y is duration of the time period which elapsed between the message generation and that message arrival on the sink
-    avg - average time messages spent in the pipeline
-    std - standard deviation of the time messages spent in the pipeline
+    `times` - list of {x, y} tuples, where x is a time the message was sent and y is duration of the time period which elapsed between the message generation and that message arrival on the sink
+    `avg` - average time messages spent in the pipeline
+    `std` - standard deviation of the time messages spent in the pipeline
+  Returns the string containing the .svg file content which can be later saved in the filesystem.
   """
   @spec prepare_plot(list({integer(), integer()}), float(), float()) :: any()
   def prepare_plot(times, avg, std) do
@@ -69,10 +70,11 @@ defmodule Utils do
   @doc """
   Saves the test results in the filesystem, as a .csv file.
   Args:
-    metrics - list of metrics gathered during a single test run, a value returned by `Utils.launch_test/1`,
-    metric_names - list of atoms describing the names of the metrics which should be saved in the filesystem,
-    path - path to the file where the result metrics should be stored,
-    should_provide_metrics_header? - `true` if the first line in the result file should contain the names of metrics, `false` otherwise.
+    `metrics` - list of metrics gathered during a single test run, a value returned by `Utils.launch_test/1`,
+    `metric_names` - list of atoms describing the names of the metrics which should be saved in the filesystem,
+    `path` - path to the file where the result metrics should be stored,
+    `should_provide_metrics_header?` - `true` if the first line in the result file should contain the names of metrics, `false` otherwise.
+  Returns the invocation of the `File.write/3` function.
   """
   @spec save_metrics(list(single_run_metrics()), list(atom()), String.t(), boolean()) :: :ok | {:error, any()}
   def save_metrics(metrics, metrics_names, path, should_provide_metrics_header?) do
