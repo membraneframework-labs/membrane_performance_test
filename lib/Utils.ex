@@ -5,26 +5,34 @@ defmodule Utils do
   @numerator_of_probing_factor 1
   @denominator_of_probing_factor 100
 
-
   @type single_run_metrics :: %{list(any()) => any()}
 
   defmodule TestOptions do
-    @enforce_keys [:mode, :number_of_elements, :how_many_tries, :tick, :inital_generator_frequency, :should_adjust_generator_frequency?, :should_produce_plots?, :chosen_metrics, :reductions]
+    @enforce_keys [
+      :mode,
+      :number_of_elements,
+      :how_many_tries,
+      :tick,
+      :inital_generator_frequency,
+      :should_adjust_generator_frequency?,
+      :should_produce_plots?,
+      :chosen_metrics,
+      :reductions
+    ]
     defstruct @enforce_keys
 
     @type t :: %__MODULE__{
-      mode: String.t(),
-      number_of_elements: integer(),
-      how_many_tries: integer(),
-      tick: integer(),
-      inital_generator_frequency: integer(),
-      should_adjust_generator_frequency?: integer(),
-      should_produce_plots?: boolean(),
-      chosen_metrics: list(atom()),
-      reductions: integer()
-    }
+            mode: String.t(),
+            number_of_elements: integer(),
+            how_many_tries: integer(),
+            tick: integer(),
+            inital_generator_frequency: integer(),
+            should_adjust_generator_frequency?: integer(),
+            should_produce_plots?: boolean(),
+            chosen_metrics: list(atom()),
+            reductions: integer()
+          }
   end
-
 
   @doc """
   Starts monitoring the process with given `pid` and waits until it terminates and sends `:DOWN` message
@@ -37,7 +45,6 @@ defmodule Utils do
       {:DOWN, ^ref, :process, ^pid, _msg} -> nil
     end
   end
-
 
   @doc """
   Creates an .svg representation of a HowLongWasAMessagePassingThroughThePipeline(time_when_message_was_sent) plot with the use of ContEx library, based on the probe of points, the average time spent by a message in the pipeline, and the standard deviation of that value.
@@ -66,7 +73,6 @@ defmodule Utils do
     output
   end
 
-
   @doc """
   Saves the test results in the filesystem, as a .csv file.
   Args:
@@ -76,7 +82,8 @@ defmodule Utils do
     `should_provide_metrics_header?` - `true` if the first line in the result file should contain the names of metrics, `false` otherwise.
   Returns the invocation of the `File.write/3` function.
   """
-  @spec save_metrics(list(single_run_metrics()), list(atom()), String.t(), boolean()) :: :ok | {:error, any()}
+  @spec save_metrics(list(single_run_metrics()), list(atom()), String.t(), boolean()) ::
+          :ok | {:error, any()}
   def save_metrics(metrics, metrics_names, path, should_provide_metrics_header?) do
     if should_provide_metrics_header? do
       provide_results_file_header(metrics_names, path)
@@ -101,29 +108,6 @@ defmodule Utils do
       [:append]
     )
   end
-
-
-  @doc """
-  Gets the value from the inner dictionaries of a nested dictionary.
-  A nested dictionary is a dictionary whose values are some other (potentially also nested) dictionaries.
-  Args:
-    map - a nested dictionary,
-    list_of_keys - list of keys which point to the desired value of some inner dictionary
-  Returns: a value in the `map`, pointed by the `list_of_keys`.
-  """
-  @spec access_nested_map(map(), list(any)) :: any()
-  def access_nested_map(map, list_of_keys) when length(list_of_keys) == 1 and is_map(map) do
-    [key] = list_of_keys
-    Map.get(map, key)
-  end
-
-  def access_nested_map(map, list_of_keys) when is_map(map) do
-    [key | rest] = list_of_keys
-    access_nested_map(Map.get(map, key), rest)
-  end
-
-  def access_nested_map(_map, _list_of_keys), do: nil
-
 
   @doc """
   Launches a test parametrized with the Utils.TestOptions structure and returns the metrics gathered during that test.

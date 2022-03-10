@@ -41,6 +41,5 @@ defmodule Reductions do
         @function
       end
     end
-
   end
 end

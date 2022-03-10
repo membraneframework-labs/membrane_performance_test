@@ -9,7 +9,7 @@ defmodule Mix.Tasks.PerformanceTest do
   @strict_keywords_list [
     mode: :string,
     numberOfElements: :integer,
-    howManyTries: :integer,
+    howManyTries: :integer
   ]
   @optional_keywords_list [
     shouldAdjustGeneratorFrequency: :boolean,
@@ -37,6 +37,7 @@ defmodule Mix.Tasks.PerformanceTest do
   def run(args) do
     {options, arguments, errors} =
       OptionParser.parse(args, strict: @strict_keywords_list ++ @optional_keywords_list)
+
     if errors != [] or length(arguments) != 1 or
          Enum.any?(@strict_keywords_list, fn {key, _value} ->
            not Keyword.has_key?(options, key)
@@ -48,11 +49,18 @@ defmodule Mix.Tasks.PerformanceTest do
       number_of_elements = Keyword.get(options, :numberOfElements)
       how_many_tries = Keyword.get(options, :howManyTries)
       tick = Keyword.get(options, :tick, @default_ticks)
-      inital_generator_frequency = Keyword.get(options, :initalGeneratorFrequency, @default_initial_generator_frequency)
+
+      inital_generator_frequency =
+        Keyword.get(options, :initalGeneratorFrequency, @default_initial_generator_frequency)
+
       should_adjust_generator_frequency? = Keyword.get(options, :shouldAdjustGeneratorFrequency)
       should_produce_plots? = Keyword.get(options, :shouldProducePlots)
       should_provide_metrics_header? = Keyword.get(options, :shouldProvideMetricsHeader)
-      chosen_metrics = Keyword.get(options, :chosenMetrics, @default_chosen_metrics) |> change_metric_strings_into_atoms()
+
+      chosen_metrics =
+        Keyword.get(options, :chosenMetrics, @default_chosen_metrics)
+        |> change_metric_strings_into_atoms()
+
       reductions = Keyword.get(options, :reductions, @default_reductions)
       [output_directory_path] = arguments
 
@@ -66,7 +74,7 @@ defmodule Mix.Tasks.PerformanceTest do
           should_adjust_generator_frequency?: should_adjust_generator_frequency?,
           should_produce_plots?: should_produce_plots?,
           chosen_metrics: chosen_metrics,
-          reductions: reductions,
+          reductions: reductions
         })
 
       Utils.save_metrics(

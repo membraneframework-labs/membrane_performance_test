@@ -139,15 +139,19 @@ defmodule Base.Sink do
 
     write_demanded_metrics(state)
 
-    specification = if state.global_state.tries_counter==0 do :the_same else #the first run is the warm-up run
-      check_normality(
-        state.single_try_state.times,
-        passing_time_avg,
-        passing_time_std,
-        state.metrics.throughput,
-        generator_frequency
-      )
-    end
+    # the first run is the warm-up run
+    specification =
+      if state.global_state.tries_counter == 0 do
+        :the_same
+      else
+        check_normality(
+          state.single_try_state.times,
+          passing_time_avg,
+          passing_time_std,
+          state.metrics.throughput,
+          generator_frequency
+        )
+      end
 
     actions =
       if state.global_state.tries_counter == state.opts.how_many_tries do
@@ -222,7 +226,7 @@ defmodule Base.Sink do
   defp write_demanded_metrics(state) do
     new_metrics =
       state.opts.chosen_metrics
-      |> Enum.map(fn key -> {key, Utils.access_nested_map(state, key)} end)
+      |> Enum.map(fn key -> {key, Bunch.Access.get_in(state, key)} end)
       |> Map.new()
 
     send(

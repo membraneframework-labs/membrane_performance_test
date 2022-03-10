@@ -8,7 +8,7 @@ defmodule Test.PerformanceTest do
     average_autodemand_throughput = get_average_throughput("autodemand", 0)
 
     IO.puts(
-     "PUSH: #{average_push_throughput} PULL: #{average_pull_throughput} AUTODEMAND: #{average_autodemand_throughput}"
+      "PUSH: #{average_push_throughput} PULL: #{average_pull_throughput} AUTODEMAND: #{average_autodemand_throughput}"
     )
   end
 
@@ -47,5 +47,4 @@ defmodule Test.PerformanceTest do
 
     average_throughput
   end
-
 end
