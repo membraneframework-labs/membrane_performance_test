@@ -6,7 +6,7 @@ defmodule Membrane.Template.Mixfile do
 
   def project do
     [
-      app: :membrane_template_plugin,
+      app: :membrane_performance_test,
       version: @version,
       elixir: "~> 1.13",
       elixirc_paths: elixirc_paths(Mix.env()),

@@ -87,7 +87,7 @@ defmodule Base.Sink do
         state
       end
 
-    time = Membrane.Time.monotonic_time() - buffer.dts
+    time = Membrane.Time.monotonic_time() - buffer.pts
 
     state =
       if :rand.uniform(state.opts.denominator_of_probing_factor) <=
@@ -96,7 +96,7 @@ defmodule Base.Sink do
           Map.update!(
             state.single_try_state,
             :times,
-            &[{buffer.dts - state.single_try_state.start_time, time} | &1]
+            &[{buffer.pts - state.single_try_state.start_time, time} | &1]
           )
 
         %{state | single_try_state: single_try_state}
@@ -139,15 +139,15 @@ defmodule Base.Sink do
 
     write_demanded_metrics(state)
 
-    specification =
+    specification = if state.global_state.tries_counter==0 do :the_same else #the first run is the warm-up run
       check_normality(
         state.single_try_state.times,
         passing_time_avg,
         passing_time_std,
         state.metrics.throughput,
-        generator_frequency,
-        state.global_state.tries_counter
+        generator_frequency
       )
+    end
 
     actions =
       if state.global_state.tries_counter == state.opts.how_many_tries do
@@ -203,14 +203,10 @@ defmodule Base.Sink do
          passing_time_avg,
          passing_time_std,
          _throughput,
-         _generator_frequency,
-         try_no
+         _generator_frequency
        ) do
     cond do
-      try_no == 0 ->
-        :the_same
-
-      # average passing time of a message is greater than 20ms which is unacceptable, therfore we neee to slow down the message generation
+      # average passing time of a message is greater than 20ms which is unacceptable, therfore we need to slow down the message generation
       passing_time_avg > 20_000_000 ->
         :slower
 

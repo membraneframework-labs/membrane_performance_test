@@ -14,7 +14,7 @@ defmodule Reductions do
     end)
   end
 
-  def calculate do
+  defp calculate do
     setup_process(@n1)
 
     r1 =
@@ -29,18 +29,15 @@ defmodule Reductions do
         value -> value
       end
 
-    # a*n+b = r
-    a = trunc((r2 - r1) / (@n2 - @n1))
-    b = r2 - a * @n2
-    {a, b, r1, r2}
+    {r1, r2}
   end
 
   def prepare_desired_function(how_many_reductions) do
-    {_a, _b, r1, r2} = calculate()
-    n_better = trunc((how_many_reductions - r2) / (r2 - r1) * (@n2 - @n1) + @n2)
+    {r1, r2} = calculate()
+    n = trunc((how_many_reductions - r2) / (r2 - r1) * (@n2 - @n1) + @n2)
 
     fn ->
-      for _ <- 1..n_better do
+      for _ <- 1..n do
         @function
       end
     end

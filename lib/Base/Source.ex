@@ -51,7 +51,7 @@ defmodule Base.Source do
   def handle_tick(:next_buffer_timer, _ctx, state = %{status: :playing}) do
     buffers =
       for _i <- 1..state.messages_per_interval,
-          do: %Buffer{payload: @message, dts: Membrane.Time.monotonic_time()}
+          do: %Buffer{payload: @message, pts: Membrane.Time.monotonic_time()}
 
     actions = [buffer: {:output, buffers}]
     {{:ok, actions}, state}
@@ -97,7 +97,7 @@ defmodule Base.Source do
         messages_per_second: messages_per_second
     }
 
-    {{:ok, start_timer: {:next_buffer_timer, Ratio.new(Time.milliseconds(@interval), 1)}}, state}
+    {{:ok, start_timer: {:next_buffer_timer, Time.milliseconds(@interval)}}, state}
   end
 
   def handle_other(_msg, _ctx, state) do
