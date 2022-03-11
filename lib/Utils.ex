@@ -100,6 +100,7 @@ defmodule Utils do
         |> Enum.map(fn {_key, value} -> value end)
         |> Enum.join(",")
       end)
+      |> Enum.reject(&(&1 == ""))
       |> Enum.join("\n")
 
     File.write(
@@ -212,12 +213,16 @@ defmodule Utils do
   end
 
   defp provide_results_file_header(metrics_names, path) do
-    content = (metrics_names |> Enum.join(",")) <> "\n"
+    if metrics_names != [] do
+      content = (metrics_names |> Enum.join(",")) <> "\n"
 
-    File.write(
-      path,
-      content,
-      [:append]
-    )
+      File.write(
+        path,
+        content,
+        [:append]
+      )
+
+      nil
+    end
   end
 end

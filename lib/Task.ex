@@ -3,7 +3,8 @@ defmodule Mix.Tasks.PerformanceTest do
 
   @syntax_error_message "Wrong syntax! Try: mix performance_test --mode <push|pull|autodemand> --numberOfElements <number of elements>
    --howManyTries <how many tries> OPTIONAL: [--tick <single try length [ms], default: 10_000> --initialGeneratorFrequency <frequency of the message generator in the first run, default: 50_000 msg/s>
-   --chosenMetrics <comma separated list of statistic names which should be saved, default: ''> --reductions <number of reductions to be performed in each filter, while processing buffer, default: 10_000>
+   --chosenMetrics <comma separated list of statistic names which should be saved, default: '', available_metrics: throughput|generator_frequency|passing_time_avg|passing_time_std>
+   --reductions <number of reductions to be performed in each filter, while processing buffer, default: 10_000>
    --shouldAdjustGeneratorFrequency, --shouldProducePlots, --shouldProvidemetricsHeader]
    ARG: <output directory path>"
   @strict_keywords_list [
@@ -63,6 +64,8 @@ defmodule Mix.Tasks.PerformanceTest do
 
       reductions = Keyword.get(options, :reductions, @default_reductions)
       [output_directory_path] = arguments
+      File.mkdir(output_directory_path)
+      File.mkdir(Path.join(output_directory_path, @plots_directory))
 
       result_metrics =
         Utils.launch_test(%Utils.TestOptions{
@@ -87,6 +90,7 @@ defmodule Mix.Tasks.PerformanceTest do
       if should_produce_plots? do
         result_metrics
         |> Enum.with_index()
+        |> Enum.reject(fn {_single_try_list_of_metrics, i} -> i == 0 end)
         |> Enum.each(fn {single_try_list_of_metrics, i} ->
           output =
             Utils.prepare_plot(
