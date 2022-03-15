@@ -3,19 +3,19 @@ Membrane Performance Test checks the performance of the Membrane Core, by findin
 
 ## Usage
 Test can be launched with the mix task command:
-`mix performance_test`
-`--mode <push|pull|autodemand>`
-`--numberOfElements <number of elements>`
-`--howManyTries <how many tries>`
-`OPTIONAL:`
-`--tick <single try length [ms], default: 10_000>`
-`--initialGeneratorFrequency <frequency of the message generator in the first run, default: 50_000 msg/s>`
-`--chosenMetrics <comma separated list of statistic names which should be saved, default: '', available_metrics: throughput|generator_frequency|passing_time_avg|passing_time_std>`
-`--reductions <number of reductions to be performed in each filter, while processing buffer, default: 10_000>`
-`SWITCHES:`
-`--shouldAdjustGeneratorFrequency, --shouldProducePlots, --shouldProvidemetricsHeader`
-`ARG:`
-`<output directory path>`
+`mix performance_test`<br>
+`--mode <push|pull|autodemand>`<br>
+`--numberOfElements <number of elements>`<br>
+`--howManyTries <how many tries>`<br>
+`OPTIONAL:`<br>
+`--tick <single try length [ms], default: 10_000>`<br>
+`--initialGeneratorFrequency <frequency of the message generator in the first run, default: 50_000 msg/s>`<br>
+`--chosenMetrics <comma separated list of statistic names which should be saved, default: '', available_metrics: throughput|generator_frequency|passing_time_avg|passing_time_std>`<br>
+`--reductions <number of reductions to be performed in each filter, while processing buffer, default: 10_000>`<br>
+`SWITCHES:`<br>
+`--shouldAdjustGeneratorFrequency, --shouldProducePlots, --shouldProvidemetricsHeader`<br>
+`ARG:`<br>
+`<output directory path>`<br>
 
 As a result, a csv file called `stats.csv` will be produced in the *output directory path*, containing the desired metrics. If `--shouldProvideStatisticsHeader` flag is defined, the chosen statistics names header will be present on the top of the result file.  If `--shouldProducePlots` optional flag is defined, in that directory there will also appear a `plot/` directory, with `*_plot.svg` files inside, which are **MessagePassingTime(TimeWhenTheMessageWasSent)** plots.
 Available metrics: `throughput, generator_frequency, passing_time_avg, passing_time_std, tick, tries_counter`
