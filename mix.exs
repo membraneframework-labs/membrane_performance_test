@@ -37,12 +37,13 @@ defmodule Membrane.Template.Mixfile do
   defp deps do
     [
       {:membrane_core,
-       git: "https://github.com/membraneframework/membrane_core", tag: "v0.9.0-rc.0"},
+       git: "https://github.com/membraneframework/membrane_core", ref: "v0.9.0-rc.0"},
       {:ex_doc, "~> 0.22", only: :dev, runtime: false},
       {:dialyxir, "~> 1.0.0", only: :dev, runtime: false},
       {:credo, "~> 1.4", only: :dev, runtime: false},
       {:telemetry, "~> 1.0"},
-      {:contex, "~> 0.4.0"}
+      {:contex, "~> 0.4.0"},
+      {:progress_bar, "> 0.0.0"}
     ]
   end
 

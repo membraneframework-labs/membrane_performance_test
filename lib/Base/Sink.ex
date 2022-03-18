@@ -165,6 +165,17 @@ defmodule Base.Sink do
         [notify: {:play, specification}]
       end
 
+    format = [
+      bar_color: [IO.ANSI.white(), IO.ANSI.green_background()],
+      blank_color: IO.ANSI.red_background()
+    ]
+
+    ProgressBar.render(
+      state.global_state.tries_counter + 1,
+      state.opts.how_many_tries + 1,
+      format
+    )
+
     state = %{
       state
       | single_try_state: %{

@@ -45,7 +45,7 @@ defmodule Base.Source do
   end
 
   def handle_prepared_to_playing(_ctx, state) do
-    {{:ok, start_timer: {:next_buffer_timer, Ratio.new(Time.milliseconds(@interval), 1)}}, state}
+    {{:ok, start_timer: {:next_buffer_timer, Time.milliseconds(@interval)}}, state}
   end
 
   def handle_tick(:next_buffer_timer, _ctx, state = %{status: :playing}) do
@@ -78,12 +78,12 @@ defmodule Base.Source do
         messages_per_second: messages_per_second
     }
 
-    {{:ok, start_timer: {:next_buffer_timer, Ratio.new(Time.milliseconds(@interval), 1)}}, state}
+    {{:ok, start_timer: {:next_buffer_timer, Time.milliseconds(@interval)}}, state}
   end
 
   def handle_other({:play, :the_same}, _ctx, state = %{status: :flushing}) do
     state = %{state | status: :playing}
-    {{:ok, start_timer: {:next_buffer_timer, Ratio.new(Time.milliseconds(@interval), 1)}}, state}
+    {{:ok, start_timer: {:next_buffer_timer, Time.milliseconds(@interval)}}, state}
   end
 
   def handle_other({:play, :faster}, _ctx, state = %{status: :flushing}) do

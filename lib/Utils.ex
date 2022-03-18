@@ -179,6 +179,10 @@ defmodule Utils do
           )
     }
 
+    IO.puts(
+      "[Performance test] Starting test. MODE: #{opts.mode} NUMBER OF TRIES: #{opts.how_many_tries} tries+1 warmup try ESTIMATED DURATION: #{div(opts.tick * (opts.how_many_tries + 1), 1000)} s"
+    )
+
     {:ok, pid} = Pipeline.start_link(options)
     Pipeline.play(pid)
 

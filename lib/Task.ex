@@ -64,8 +64,7 @@ defmodule Mix.Tasks.PerformanceTest do
 
       reductions = Keyword.get(options, :reductions, @default_reductions)
       [output_directory_path] = arguments
-      File.mkdir(output_directory_path)
-      File.mkdir(Path.join(output_directory_path, @plots_directory))
+      File.mkdir_p(Path.join(output_directory_path, @plots_directory))
 
       result_metrics =
         Utils.launch_test(%Utils.TestOptions{

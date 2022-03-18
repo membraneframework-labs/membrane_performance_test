@@ -7,16 +7,24 @@ defmodule Test.PerformanceTest do
     average_pull_throughput = get_average_throughput("pull", 0)
     average_autodemand_throughput = get_average_throughput("autodemand", 0)
 
-    IO.puts(
-      "PUSH: #{average_push_throughput} PULL: #{average_pull_throughput} AUTODEMAND: #{average_autodemand_throughput}"
-    )
+    IO.puts("""
+
+    |=================================================
+    | MODE:       |  THROUGHPUT:
+    |=================================================
+    | push        |  #{:erlang.float_to_binary(average_push_throughput, decimals: 2)} msg/s
+    | pull        |  #{:erlang.float_to_binary(average_pull_throughput, decimals: 2)} msg/s
+    | autodemand  |  #{:erlang.float_to_binary(average_autodemand_throughput, decimals: 2)} msg/s
+    |=================================================
+
+    """)
   end
 
   defp get_average_throughput(mode, how_many_tries) do
     opts = %Utils.TestOptions{
       mode: mode,
       number_of_elements: 10,
-      how_many_tries: 8,
+      how_many_tries: 0,
       tick: 10_000,
       inital_generator_frequency: 50_000,
       should_adjust_generator_frequency?: true,
@@ -25,9 +33,11 @@ defmodule Test.PerformanceTest do
       reductions: 1_000
     }
 
+    IO.puts("[Performance test] Adjusting the generator frequency")
     result = List.last(Utils.launch_test(opts))
-
     %{[:metrics, :generator_frequency] => frequency} = result
+
+    IO.puts("[Performance test] Getting results")
 
     opts = %Utils.TestOptions{
       opts
