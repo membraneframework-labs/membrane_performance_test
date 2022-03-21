@@ -27,6 +27,20 @@ Some exemplary tests, defined inside the `boot_script.sh` file, can be launched 
 2) Building the image: `docker build -t performance_test .` inside the root project directory
 3) Running the container: ``docker run -v `pwd`/results:/project/results/ performance_test`` inside the root project directory
 
+
+There is also a possibility to launch a predefined ExUnit test with the following command:
+```
+mix test
+```
+
+The test launched with the command will compare the performance between the pipelines using the pads with `push`, `pull`, and `autodemand` modes.
+For each mode, the test will adjust the optimal frequency of message generation and later on will perform a test in order to find the maximal 
+throughput:
+
+
+At the end of the test, a comparison table will be printed:
+
+
 ## Copyright and License
 
 Copyright 2020, [Software Mansion](https://swmansion.com/?utm_source=git&utm_medium=readme&utm_campaign=membrane_template_plugin)
