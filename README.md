@@ -35,11 +35,11 @@ mix test
 
 The test launched with the command will compare the performance between the pipelines using the pads with `push`, `pull`, and `autodemand` modes.
 For each mode, the test will adjust the optimal frequency of message generation and later on will perform a test in order to find the maximal 
-throughput:
+throughput: <br>
+![ExUnit test runtime](assets/test_runtime.png)
 
-
-At the end of the test, a comparison table will be printed:
-
+At the end of the test, a comparison table will be printed: <br>
+![ExUnit test results](assets/test_results.png)
 
 ## Copyright and License
 
