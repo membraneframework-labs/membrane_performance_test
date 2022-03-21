@@ -169,10 +169,11 @@ defmodule Base.Sink do
       bar_color: [IO.ANSI.white(), IO.ANSI.green_background()],
       blank_color: IO.ANSI.red_background()
     ]
-
+    throughput_string = " THROUGHPUT: #{:erlang.float_to_binary(state.metrics.throughput, decimals: 2)} msg/s "
     ProgressBar.render(
       state.global_state.tries_counter + 1,
       state.opts.how_many_tries + 1,
+      throughput_string,
       format
     )
 

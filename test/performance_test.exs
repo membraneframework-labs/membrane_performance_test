@@ -24,7 +24,7 @@ defmodule Test.PerformanceTest do
     opts = %Utils.TestOptions{
       mode: mode,
       number_of_elements: 10,
-      how_many_tries: 0,
+      how_many_tries: 8,
       tick: 10_000,
       inital_generator_frequency: 50_000,
       should_adjust_generator_frequency?: true,

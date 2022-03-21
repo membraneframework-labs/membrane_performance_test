@@ -43,7 +43,8 @@ defmodule Membrane.Template.Mixfile do
       {:credo, "~> 1.4", only: :dev, runtime: false},
       {:telemetry, "~> 1.0"},
       {:contex, "~> 0.4.0"},
-      {:progress_bar, "> 0.0.0"}
+      #{:progress_bar, "> 0.0.0"}
+      {:progress_bar, git: "https://github.com/varsill/progress_bar", ref: "9c042addaa17cf31cba8330712fe590a9534e914"}
     ]
   end
 
