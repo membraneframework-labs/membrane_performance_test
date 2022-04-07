@@ -6,7 +6,7 @@ defmodule Membrane.Template.Mixfile do
 
   def project do
     [
-      app: :membrane_template_plugin,
+      app: :membrane_performance_test,
       version: @version,
       elixir: "~> 1.13",
       elixirc_paths: elixirc_paths(Mix.env()),
@@ -27,7 +27,7 @@ defmodule Membrane.Template.Mixfile do
 
   def application do
     [
-      extra_applications: []
+      extra_applications: [:crypto]
     ]
   end
 
@@ -36,10 +36,15 @@ defmodule Membrane.Template.Mixfile do
 
   defp deps do
     [
-      {:membrane_core, "~> 0.8.1"},
-      {:ex_doc, ">= 0.0.0", only: :dev, runtime: false},
-      {:dialyxir, ">= 0.0.0", only: :dev, runtime: false},
-      {:credo, ">= 0.0.0", only: :dev, runtime: false}
+      {:membrane_core,
+       git: "https://github.com/membraneframework/membrane_core", ref: "v0.9.0-rc.0"},
+      {:ex_doc, "~> 0.22", only: :dev, runtime: false},
+      {:dialyxir, "~> 1.0.0", only: :dev, runtime: false},
+      {:credo, "~> 1.4", only: :dev, runtime: false},
+      {:telemetry, "~> 1.0"},
+      {:contex, "~> 0.4.0"},
+      #{:progress_bar, "> 0.0.0"}
+      {:progress_bar, git: "https://github.com/varsill/progress_bar", ref: "9c042addaa17cf31cba8330712fe590a9534e914"}
     ]
   end
 
